@@ -1,0 +1,3167 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>せいかくしんだん</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Zen+Old+Mincho:wght@400;700;900&display=swap" rel="stylesheet" />
+    <style>
+      :root{
+        --bg:#f7f8f7;
+        --surface:#ffffff;
+        --surface2:#eef1ef;
+        --ink:#191c20;
+        --muted:#5b636e;
+        --faint:#8a929c;
+        --accent:#0f766e;
+        --accent-ink:#ffffff;
+        --line:#dfe4e1;
+        --bar-track:#e4e8e6;
+        --dark-panel:#0b0d0f;
+        --dark-ink:#d8deda;
+        --dark-muted:#8f9791;
+        --warn:#b3543f;
+        --shadow:0 10px 30px rgba(20,30,28,.07);
+        /* ホラーパート専用書体：丸ゴシックではなく、鋭く冷たい明朝系。
+           診断パートは従来の Zen Kaku Gothic New のまま変えない */
+        --font-horror:"Shippori Mincho B1","Zen Old Mincho","HorrorMinchoFallback","Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho","YuMincho","Noto Serif JP",serif;
+        /* 演出用：JSが質問の進行に合わせて書き換える */
+        --sat:1;
+        --bright:1;
+        --contrast:1;
+        --vig:0;
+        --grain:0;
+      }
+      @media (prefers-color-scheme: dark){
+        :root{
+          --bg:#101315;
+          --surface:#171b1e;
+          --surface2:#1e2427;
+          --ink:#e9edeb;
+          --muted:#9aa4a0;
+          --faint:#6d7772;
+          --accent:#4faea3;
+          --line:#2a3134;
+          --bar-track:#262d30;
+          --shadow:0 10px 30px rgba(0,0,0,.35);
+        }
+      }
+      *{ box-sizing:border-box; }
+      /* フォント読込前後のシフト対策：ローカルフォールバックの字幅・行高を本フォントに寄せる */
+      @font-face{
+        font-family:"ZenFallback";
+        src:local("Hiragino Kaku Gothic ProN"), local("Hiragino Sans"), local("Noto Sans JP"), local("Yu Gothic Medium"), local("Yu Gothic");
+        size-adjust:97%;
+        ascent-override:91%;
+        descent-override:23%;
+        line-gap-override:0%;
+      }
+      /* 明朝Webフォント読込前後のシフト対策：ローカル明朝の字幅・行高を Shippori Mincho に寄せ、
+         swap で差し替わっても行の折り返し位置とボタン高さが大きく動かないようにする */
+      @font-face{
+        font-family:"HorrorMinchoFallback";
+        src:local("Hiragino Mincho ProN"), local("Hiragino Mincho Pro"), local("Yu Mincho"), local("YuMincho"), local("Noto Serif JP");
+        size-adjust:98%;
+        ascent-override:92%;
+        descent-override:24%;
+        line-gap-override:0%;
+      }
+      html{ -webkit-text-size-adjust:100%; overflow-x:clip; }
+      body{
+        margin:0;
+        background:var(--bg);
+        color:var(--ink);
+        font-family:"Zen Kaku Gothic New","ZenFallback","Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif;
+        line-height:1.75;
+        overflow-x:clip;
+        -webkit-font-smoothing:antialiased;
+        transition:background 1.6s ease;
+      }
+      .wrap{
+        max-width:680px; margin:0 auto; padding:28px 20px 72px; position:relative; z-index:2;
+      }
+      /* ---------- 映像レイヤー（背景・粒子・ビネット） ---------- */
+      .ambient{ position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
+      .ambient .blob{
+        position:absolute; border-radius:50%; filter:blur(46px);
+        opacity:.5; transition:filter 1.4s ease, opacity 1.4s ease;
+      }
+      .ambient .b1{ width:46vmax; height:46vmax; left:-14vmax; top:-12vmax; background:#7fd1c0; animation:drift1 26s ease-in-out infinite alternate; }
+      .ambient .b2{ width:38vmax; height:38vmax; right:-12vmax; top:16vh; background:#f2b8c6; animation:drift2 32s ease-in-out infinite alternate; }
+      .ambient .b3{ width:34vmax; height:34vmax; left:8vw; bottom:-16vmax; background:#a8c4ec; animation:drift1 38s ease-in-out infinite alternate-reverse; }
+      .ambient .b4{ width:26vmax; height:26vmax; right:12vw; bottom:-8vmax; background:#f5d98b; animation:drift2 29s ease-in-out infinite alternate-reverse; }
+      @keyframes drift1{ from{ transform:translate(0,0) scale(1);} to{ transform:translate(6vmax,4vmax) scale(1.12);} }
+      @keyframes drift2{ from{ transform:translate(0,0) scale(1.08);} to{ transform:translate(-5vmax,6vmax) scale(.94);} }
+      button{ font-family:inherit; cursor:pointer; }
+      button, [role="button"]{ min-height:2.25rem; }
+
+      /* ---------- 導入 ---------- */
+      .intro{ padding-top:6vh; text-align:left; }
+      .intro .site-name{ font-size:.85rem; letter-spacing:.35em; color:var(--muted); margin:0 0 14px; }
+      .intro h1{ font-size:clamp(1.72rem,6.4vw,2rem); font-weight:900; line-height:1.45; margin:0 0 16px; line-break:strict; }
+      .intro p.lede{ font-size:1rem; color:var(--ink); margin:0 0 10px; }
+      .intro .meta{ display:flex; flex-wrap:wrap; gap:8px; margin:22px 0 30px; }
+      .intro .meta span{
+        font-size:.8rem; color:var(--muted); border:1px solid var(--line);
+        border-radius:999px; padding:5px 14px; background:var(--surface);
+      }
+      .btn-primary{
+        display:block; width:100%; padding:18px 20px; border:none; border-radius:14px;
+        background:var(--accent); color:var(--accent-ink); font-size:1.05rem; font-weight:700;
+        letter-spacing:.08em; transition:opacity .2s, background 1.2s ease;
+      }
+      .btn-primary:active{ opacity:.75; }
+      .fineprint{ font-size:.75rem; color:var(--faint); margin-top:18px; line-height:1.7; }
+      .intro-name{ margin:0 0 20px; }
+      .intro-name label{ display:block; font-size:.85rem; color:var(--muted); margin-bottom:2px; }
+      .intro-name .name-input{ margin:8px 0 0; }
+
+      /* ---------- 導入の映像（4軸のオーブ） ---------- */
+      /* 絶対配置＋個別アニメーションで縦位置が常にズレていたため、flexで整列させる。
+         浮遊は全オーブ同一タイミングにして、相対位置が崩れないようにする */
+      .intro-viz{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 6px; margin:6px 0 26px; }
+      .intro-viz .orb{
+        position:static; flex:none; width:104px; height:104px; border-radius:50%;
+        display:flex; align-items:center; justify-content:center;
+        font-weight:900; font-size:1.5rem; line-height:1; color:rgba(255,255,255,.92);
+        mix-blend-mode:multiply; opacity:.82;
+        animation:floaty 7.5s ease-in-out infinite;
+      }
+      @media (prefers-color-scheme: dark){ .intro-viz .orb{ mix-blend-mode:screen; } }
+      .intro-viz .o1{ background:#2ea89a; }
+      .intro-viz .o2{ background:#e2708a; }
+      .intro-viz .o3{ background:#5b84c4; }
+      .intro-viz .o4{ background:#d9a83e; }
+      @keyframes floaty{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-9px);} }
+      .intro-viz .viz-cap{ flex-basis:100%; font-size:.75rem; color:var(--faint); letter-spacing:.14em; margin-top:2px; }
+      @media (max-width:560px){
+        .intro-viz .orb{ width:72px; height:72px; font-size:1.05rem; }
+      }
+
+      /* ---------- ピーク（最終回答の直後、一瞬で来る） ---------- */
+      .peak{
+        position:fixed; inset:0; height:100dvh; z-index:90; background:#000; color:#e8ece9;
+        display:none; overflow:hidden;
+        /* ホラーパートは明朝系で統一する（診断パートの丸ゴシックは使わない） */
+        font-family:var(--font-horror);
+        letter-spacing:.02em;
+      }
+      .peak-lines p, .peak-big, .peak-theme{ text-shadow:0 2px 14px rgba(0,0,0,.9), 0 0 3px rgba(0,0,0,.9); }
+      .peak-lines p.check{ background:rgba(0,0,0,.55); }
+      /* レイアウトの背骨：ピーク全体は「スクロールする本文」と「下部のボタン帯」の2段構成。
+         以前は本文を中央寄せフレックス＋絶対配置ボタンにしていたため、
+         本文が画面より長くなると先頭が画面外に押し出されて二度とスクロールできず（文字切れ）、
+         固定ボタンが最終行の上に重なっていた。帯はフロー内に置き、本文は独立してスクロールさせる */
+      .peak.on{ display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; padding:0; text-align:center; }
+      .peak-photos{ position:absolute; inset:0; z-index:0; }
+      .peak-photos img{
+        position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+        opacity:0; transform:scale(1.14); transition:opacity 1.15s ease;
+        /* 見せすぎない：接近の写真は表示側でも暗く落とし、輪郭を粒子と滲みで曖昧にする。
+           はっきり写るのは対面（peak-face）だけに限定する */
+        filter:brightness(.6) contrast(1.05) saturate(.5) blur(.6px);
+      }
+      /* 写真の上に被る闇と粒子：縁を落とし、中央も完全には見せない */
+      .peak-photos::after{
+        content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
+        background:
+          radial-gradient(115% 85% at 50% 42%, transparent 46%, rgba(0,0,0,.62) 100%),
+          linear-gradient(180deg, rgba(0,0,0,.34), transparent 30%, transparent 62%, rgba(0,0,0,.5));
+      }
+      .peak-photos img.show{ opacity:1; animation:kenburns 9s ease-out forwards; }
+      @keyframes kenburns{ from{ transform:scale(1.14);} to{ transform:scale(1.02);} }
+      /* ---------- 場面転換 ---------- */
+      .peak{ transition:opacity 1.6s ease; }
+      .peak.bye{ opacity:0; pointer-events:none; }
+      .peak-photos img.near{ animation:none; transform:scale(1.17); transition:transform 1.5s ease, opacity 1.15s ease; }
+      .peak-photos img.door-push{ animation:none; transform:scale(1.38); filter:brightness(.94) blur(1.4px); transition:transform 1.7s ease, filter 1.7s ease, opacity 1.15s ease; }
+      .peak .lid{ position:absolute; left:0; right:0; height:50.6%; background:#000; z-index:6; pointer-events:none; transform:scaleY(0); transition:transform .55s ease-out; }
+      .peak .lid-t{ top:0; transform-origin:top; }
+      .peak .lid-b{ bottom:0; transform-origin:bottom; }
+      .peak.blink .lid{ transform:scaleY(1); transition:transform .3s ease-in; }
+      #peak-veil{ position:absolute; inset:0; background:#000; opacity:0; z-index:2; pointer-events:none; transition:opacity 2.2s ease; }
+      #peak-veil.on{ opacity:.87; }
+      .peak-grain.burst{ opacity:.5; animation-duration:.12s; }
+      /* ---------- フレーム挿み込み（転換用）：真っ黒／真っ白を数フレームだけ挟む ---------- */
+      #peak-flash{ position:absolute; inset:0; z-index:8; background:#000; opacity:0; pointer-events:none; }
+      #peak-flash.black{ opacity:1; background:#000; }
+      #peak-flash.white{ opacity:1; background:#e8e6df; }
+      /* スマッシュカット：フェードを一切使わず、闇へ即断する */
+      .peak.smash .peak-content, .peak.smash .peak-photos img{ transition:none !important; }
+      /* ---------- 見ることのコスト（Amnesia型） ----------
+         人影・顔が画面にいる間だけ、世界のノイズと歪みがわずかに強まる。
+         見続けること自体に、代償がある */
+      .peak.watching .peak-grain{ opacity:.46; animation-duration:.16s; }
+      .peak.watching .peak-photos img.show{ filter:brightness(.55) contrast(1.12) saturate(.42) blur(.9px); animation:watchWarp 3.2s ease-in-out infinite; }
+      @keyframes watchWarp{
+        0%,100%{ transform:scale(1.03) skewX(0deg); }
+        34%{ transform:scale(1.045) skewX(.35deg); }
+        67%{ transform:scale(1.028) skewX(-.3deg) translateY(2px); }
+      }
+      .peak.watching .peak-content{ filter:contrast(1.04); }
+      /* ---------- ドアを押さえる操作（抵抗の区間） ---------- */
+      .peak-hold{ margin-top:34px; width:min(420px,100%); display:grid; gap:14px; justify-items:stretch; }
+      .peak-hold.hidden{ display:none; }
+      .peak-hold-label{ margin:0; text-align:center; font-size:1.12rem; font-weight:800; letter-spacing:.08em; color:var(--dirty-hi); line-height:1.7; }
+      .peak-hold-track{ height:8px; background:#1d1f1c; border-radius:99px; overflow:hidden; }
+      .peak-hold-track i{ display:block; height:100%; width:0%; background:linear-gradient(90deg, var(--rust-dim), var(--rust)); transition:width .12s linear; }
+      .peak-hold-btn{
+        min-height:76px; border-radius:10px; border:1.5px solid #6a6e63;
+        background:rgba(10,11,10,.95); color:var(--dirty-hi);
+        font-family:var(--font-horror); font-size:1.2rem; font-weight:800; letter-spacing:.14em;
+        touch-action:manipulation; user-select:none; -webkit-user-select:none;
+      }
+      .peak-hold-btn:active{ background:rgba(38,34,30,.95); transform:scale(.985); }
+      .peak-hold-sub{ margin:0; text-align:center; font-size:.85rem; color:var(--dirty-dim); letter-spacing:.05em; }
+      /* ---------- 対面の瞬間：一度だけの最大の脅し ----------
+         拡大も移動もしない。静止画がカットで突然現れて、カットで消える。
+         トランジションを付けないことで、出現も消失も「切断」になる。
+         動く顔は面白くなってしまう。動かない方が、怖い */
+      .peak-face{
+        position:absolute; inset:0; z-index:7; width:100%; height:100%; object-fit:cover;
+        opacity:0; pointer-events:none;
+      }
+      .peak-face.show{ opacity:1; }
+      /* 急接近の瞬間だけ、本文と影のレイヤーを短く揺らす（写真レイヤー自体は揺らさない） */
+      .peak.shaking .peak-content, .peak.shaking .peak-shade{ animation:peakShake .5s linear; }
+      @keyframes peakShake{
+        0%,100%{ transform:translate(0,0); }
+        12%{ transform:translate(-9px,5px); }
+        24%{ transform:translate(8px,-6px); }
+        36%{ transform:translate(-7px,-4px); }
+        48%{ transform:translate(6px,4px); }
+        60%{ transform:translate(-4px,2px); }
+        72%{ transform:translate(3px,-2px); }
+        84%{ transform:translate(-1px,1px); }
+      }
+      .peak-shade{ position:absolute; inset:0; z-index:1; background:linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.28) 38%, rgba(0,0,0,.72) 78%, rgba(0,0,0,.92)); }
+      .peak-grain{
+        position:absolute; inset:-60px; z-index:2; pointer-events:none; opacity:.16;
+        background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+        animation:grainShift .45s steps(4) infinite;
+      }
+      @keyframes grainShift{ 0%{ transform:translate(0,0);} 25%{ transform:translate(-18px,10px);} 50%{ transform:translate(12px,-14px);} 75%{ transform:translate(-8px,-6px);} 100%{ transform:translate(0,0);} }
+      .peak-content{
+        position:relative; z-index:3;
+        /* 本文だけがスクロールする領域。min-height:0 がないとフレックス子要素が縮まず溢れる */
+        flex:1 1 auto; min-height:0; min-width:0;
+        width:100%; max-width:720px; margin:0 auto;
+        overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+        scrollbar-gutter:stable;
+        display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+        /* 最終行の下には、ボタン帯の高さに依らず常時たっぷり余白を確保する（セーフエリア込み） */
+        padding:30px 20px calc(56px + env(safe-area-inset-bottom));
+      }
+      /* 短い場面では上下の自動マージンで中央寄せに見せ、長くなったら自動マージンが0に潰れて
+         先頭から素直にスクロールできるようにする（中央寄せ＋overflow の先頭切れ対策） */
+      .peak-content::before{ content:""; flex:none; margin-top:auto; }
+      .peak-content::after{ content:""; flex:none; margin-bottom:auto; }
+      /* フレックスの圧縮でボタンや行が縦に潰れて文字が切れるのを防ぐ */
+      .peak-content>*{ flex:none; min-width:0; max-width:100%; }
+      .peak-lines{ margin-top:30px; display:grid; gap:12px; align-content:start; width:100%; max-width:560px; }
+      .peak-lines p{
+        margin:0; font-size:1.07rem; font-weight:600; line-height:1.9; color:#e2e7e3; opacity:0;
+        line-break:strict; overflow-wrap:anywhere;
+      }
+      .peak-lines p.show{ opacity:1; }
+      .peak-lines p b{ color:#fff; font-weight:800; }
+      .peak-big{
+        font-size:clamp(1.85rem,8.4vw,3rem); font-weight:800; letter-spacing:.04em;
+        color:#fff; margin:22px 0 0; opacity:0; line-height:1.55; width:100%; max-width:620px;
+        padding:0 2px;
+        line-break:strict; overflow-wrap:anywhere;
+        text-shadow:0 3px 22px rgba(0,0,0,.95), 0 0 4px rgba(0,0,0,.95), 0 0 46px rgba(0,0,0,.8);
+      }
+      .peak-big.show{ opacity:1; }
+      .peak-big .last{ color:#f0bfae; }
+      .peak-lines p.check{
+        text-align:left; border:1px solid #3a4247; border-radius:6px; padding:14px 16px;
+        background:rgba(0,0,0,.68); font-size:1rem; font-weight:600; width:100%; line-height:1.85;
+      }
+      .peak-lines p.check-head{
+        text-align:center; color:#fff; font-size:1.16rem; font-weight:800; letter-spacing:.08em;
+        border:none; background:none; padding:0; line-height:1.65;
+      }
+      .peak-theme{
+        max-width:560px; width:100%; margin:22px auto 0; font-size:clamp(1.08rem,4.8vw,1.3rem); line-height:2; font-weight:700;
+        color:#fff; border-top:1px solid #3a4247; padding-top:20px; opacity:0;
+        line-break:strict; overflow-wrap:anywhere;
+      }
+      .peak-theme.show{ opacity:1; }
+      .peak-theme b{ color:#e8b4a6; }
+      /* 「すすむ」は絶対配置の浮きボタンではなく、本文の下に常駐する帯としてフロー内に置く。
+         本文とは兄弟要素なので、どれだけ本文が長くなっても最終行に重なることはない */
+      .peak-skip{
+        display:none;
+        position:relative; z-index:5; flex:none;
+        align-self:flex-end;
+        margin:10px 16px calc(12px + env(safe-area-inset-bottom));
+        background:rgba(8,10,12,.92); border:1px solid #4a5157; color:#cfd6d1; border-radius:999px;
+        padding:12px 24px; min-height:48px;
+        font-family:var(--font-horror); font-size:.92rem; font-weight:700; letter-spacing:.08em;
+        line-height:1.5; white-space:normal; overflow-wrap:anywhere; text-align:center;
+      }
+      .peak-skip.show{ display:block; }
+      /* ---------- ピーク後半：検証シーケンス（場面が続く） ---------- */
+      .peak-scenes{ margin-top:30px; display:grid; gap:12px; align-content:start; width:100%; max-width:560px; }
+      .peak-scenes p{
+        margin:0; font-size:1.07rem; font-weight:600; line-height:1.9; color:#e2e7e3; opacity:0; text-align:left;
+        text-shadow:0 2px 14px rgba(0,0,0,.9), 0 0 3px rgba(0,0,0,.9);
+        line-break:strict; overflow-wrap:anywhere; width:100%;
+      }
+      .peak-scenes p.show{ opacity:1; }
+      .peak-scenes p b{ color:#fff; font-weight:800; }
+      .peak-scenes p.scene-head{
+        text-align:center; color:#fff; font-size:1.2rem; font-weight:800;
+        letter-spacing:.08em; margin-top:18px; line-height:1.65;
+      }
+      .peak-scenes p.check{ text-align:left; border:1px solid #3a4247; border-radius:6px; padding:14px 16px; background:rgba(0,0,0,.68); font-size:1rem; line-height:1.85; }
+      .peak-scenes p.rule{ text-align:center; color:#fff; font-weight:700; font-size:1.08rem; border:1px solid #3a4247; border-radius:6px; padding:16px; background:rgba(0,0,0,.68); line-height:1.9; }
+      .peak-scenes p.call{
+        text-align:center; font-size:clamp(1.55rem,6.8vw,2.05rem); font-weight:800; color:#fff;
+        letter-spacing:.03em; line-height:1.6; padding:0 2px;
+        text-shadow:0 3px 20px rgba(0,0,0,.95), 0 0 4px rgba(0,0,0,.95);
+      }
+      .peak-scenes p.fail{ color:#e8b4a6; }
+      .peak-choices{ display:grid; gap:12px; margin-top:22px; width:100%; max-width:420px; }
+      .peak-choices button{
+        width:100%; min-height:60px;
+        padding:16px 18px; border-radius:6px; border:1.5px solid #4a5157;
+        background:rgba(8,10,12,.92); color:#fff; font-size:1.08rem; font-weight:800;
+        font-family:var(--font-horror); letter-spacing:.06em;
+        line-height:1.6; white-space:normal; overflow-wrap:anywhere; line-break:strict; text-align:center;
+      }
+      .peak-choices button.locked{ opacity:.35; }
+      .peak-note{ color:#f0bfae; font-size:.98rem; font-weight:700; min-height:1.6em; margin-top:14px; width:100%; max-width:480px; line-height:1.85; overflow-wrap:anywhere; }
+      .peak-proceed{
+        margin:30px 0 8px; padding:16px 30px; min-height:58px; border-radius:999px; border:1px solid #4a5157;
+        background:rgba(8,10,12,.92); color:#fff; font-weight:800; letter-spacing:.06em; font-size:1.02rem;
+        font-family:var(--font-horror);
+        width:auto; max-width:100%; line-height:1.6; white-space:normal; overflow-wrap:anywhere; text-align:center;
+      }
+      @media (max-width:480px){
+        .peak-content{ padding:24px 16px calc(48px + env(safe-area-inset-bottom)); }
+        .peak-lines, .peak-scenes{ gap:10px; }
+        .peak-skip{ align-self:stretch; margin:10px 16px calc(12px + env(safe-area-inset-bottom)); }
+        .peak-choices, .peak-proceed{ width:100%; }
+        .peak-proceed{ padding:16px 20px; }
+      }
+      /* ---------- 接近エンジン：距離メーターと「自分の手で進める」ボタン ---------- */
+      .peak-distance{ margin-top:28px; width:min(440px,100%); text-align:left; }
+      .peak-distance span{
+        display:block; font-size:clamp(1rem,4.6vw,1.18rem); letter-spacing:.06em; color:#f0bfae; font-weight:800;
+        text-shadow:0 2px 16px rgba(0,0,0,.95), 0 0 3px rgba(0,0,0,.9); margin-bottom:10px;
+        font-variant-numeric:tabular-nums; line-height:1.6; line-break:strict; overflow-wrap:anywhere;
+      }
+      .peak-dist-track{ height:6px; background:#262c30; border-radius:99px; overflow:hidden; }
+      .peak-dist-track i{ display:block; height:100%; background:#f0bfae; border-radius:99px; transition:width 1s ease; }
+      .peak-advance{
+        margin:26px 0 10px; padding:17px 24px; min-height:60px; border-radius:999px; border:1.5px solid #7a8288;
+        background:rgba(8,10,12,.94); color:#fff; font-size:1.05rem; font-weight:800; letter-spacing:.05em;
+        font-family:var(--font-horror);
+        line-height:1.6; text-align:center; white-space:normal; overflow-wrap:anywhere; line-break:strict;
+        animation:advancePulse 2.6s ease-in-out infinite; width:min(340px,100%);
+      }
+      @media (max-width:480px){ .peak-advance{ width:100%; } }
+      @keyframes advancePulse{
+        0%,100%{ box-shadow:0 0 0 0 rgba(232,180,166,0); }
+        50%{ box-shadow:0 0 0 7px rgba(232,180,166,.14); }
+      }
+      .peak-complicity{
+        color:#a7aea9; font-size:.88rem; font-weight:600; letter-spacing:.03em; margin:2px 0 0; width:100%; max-width:440px; line-height:1.8; text-align:center;
+      }
+      /* ---------- ホラーパートの色と質感：綺麗に整えすぎない ----------
+         純白と整ったサーモンはやめ、灰緑にくすんだ白と、錆びたような鈍い赤茶に落とす。
+         文字には色収差のにじみ（赤と青のズレ）と滲んだ影を重ね、
+         画面全体には不規則な明滅と縦筋の汚れを薄く被せる */
+      .peak{
+        --dirty:#b4bab0;
+        --dirty-hi:#c9cec2;
+        --dirty-dim:#878d84;
+        --rust:#a26f5c;
+        --rust-dim:#77503f;
+        color:var(--dirty);
+      }
+      .peak-lines p, .peak-scenes p{ color:var(--dirty); }
+      .peak-lines p b, .peak-scenes p b{ color:var(--dirty-hi); }
+      .peak-big{ color:var(--dirty-hi); }
+      .peak-big .last{ color:var(--rust); }
+      .peak-theme{ color:var(--dirty-hi); border-top-color:#2c2f2c; }
+      .peak-theme b{ color:var(--rust); }
+      .peak-lines p.check-head, .peak-scenes p.scene-head{ color:var(--dirty-hi); }
+      .peak-scenes p.call{ color:var(--dirty-hi); }
+      .peak-scenes p.fail, .peak-note{ color:var(--rust); }
+      .peak-lines p.check, .peak-scenes p.check, .peak-scenes p.rule{
+        border-color:#33352f; background:rgba(5,6,5,.72);
+      }
+      .peak-lines p, .peak-scenes p, .peak-big, .peak-theme{
+        text-shadow:
+          1px 0 0 rgba(122,32,32,.28),
+          -1px 0 0 rgba(38,58,74,.30),
+          0 0 9px rgba(0,0,0,.85),
+          0 2px 16px rgba(0,0,0,.92);
+      }
+      .peak-lines p:nth-child(3n) , .peak-scenes p:nth-child(3n){ opacity:.94; }
+      .peak-lines p:nth-child(4n+1), .peak-scenes p:nth-child(4n+1){
+        text-shadow:
+          1.6px 0 0 rgba(122,32,32,.34),
+          -1px 0 1px rgba(38,58,74,.3),
+          0 0 12px rgba(0,0,0,.9),
+          0 2px 16px rgba(0,0,0,.92);
+      }
+      .peak-distance span{ color:var(--rust); }
+      .peak-dist-track{ background:#1d1f1c; }
+      .peak-dist-track i{ background:linear-gradient(90deg, var(--rust-dim), var(--rust)); }
+      .peak-choices button, .peak-proceed, .peak-advance, .peak-skip{
+        border-color:#4c4f47; color:var(--dirty-hi);
+      }
+      .peak-advance{ animation-name:advancePulseDirty; }
+      @keyframes advancePulseDirty{
+        0%,100%{ box-shadow:0 0 0 0 rgba(162,111,92,0); }
+        50%{ box-shadow:0 0 0 7px rgba(162,111,92,.13); }
+      }
+      /* 不規則な明滅：等間隔ではなく、たまに一瞬だけ落ちる */
+      .peak.on .peak-shade{ animation:shadeFlicker 9s steps(1) infinite; }
+      @keyframes shadeFlicker{
+        0%, 6.9%{ opacity:1; } 7%{ opacity:.86; } 7.6%, 41.9%{ opacity:1; }
+        42%{ opacity:.93; } 42.4%, 43.1%{ opacity:.82; } 43.5%, 77.9%{ opacity:1; }
+        78%{ opacity:.9; } 78.5%, 100%{ opacity:1; }
+      }
+      .peak.on .peak-content{ animation:textSway 13s steps(1) infinite; }
+      @keyframes textSway{
+        0%, 31.9%{ transform:translate(0,0); } 32%{ transform:translate(.6px,0); }
+        32.7%, 68.9%{ transform:translate(0,0); } 69%{ transform:translate(-.8px,.4px); }
+        69.8%, 100%{ transform:translate(0,0); }
+      }
+      /* 画面全体に被る汚れ：縦筋と縁の焦げ。文字の上にも薄く乗る */
+      .peak::after{
+        content:""; position:absolute; inset:0; z-index:4; pointer-events:none;
+        opacity:.5; mix-blend-mode:overlay;
+        background:
+          repeating-linear-gradient(90deg, rgba(0,0,0,.16) 0 1px, transparent 1px 7px, rgba(255,255,255,.05) 7px 8px, transparent 8px 19px),
+          radial-gradient(120% 90% at 50% 42%, transparent 55%, rgba(0,0,0,.55) 100%);
+      }
+      .peak-grain{ opacity:.24; }
+      /* 一瞬だけ見える「気配」：本番の前に、弱く・短くちらつかせる。
+         ここも動かさない。静止したまま、薄く出すだけ */
+      .peak-face.glimpse{ opacity:.16; filter:brightness(.75) saturate(.5); }
+      /* 知覚のミスマッチ：対面が終わったあとも、顔が薄く残り続ける。
+         ずれも寄りもしない。ただ、消えきらない。「まだいる」という静かな異常 */
+      .peak-face.linger{ opacity:.13; filter:brightness(.8) saturate(.5); }
+      /* 対面の二度目：結果画面に入る直前、「終わった」と思ったあとに来る。
+         一度目と同じく静止画のカットイン。音はなく、一度目より長く、
+         動かずにそこにいる。コンテンツ側は先に消して、顔だけを残す */
+      .peak-content.gone{ opacity:0 !important; transition:opacity .45s ease; }
+      .return-line{
+        font-family:var(--font-horror); font-size:.9rem; color:var(--muted);
+        margin:14px 0 0; letter-spacing:.05em; line-height:1.9;
+      }
+      .peak-face-alt{ transform-origin:60% 42%; }
+      .abyss .closing .last, .tail-line{ color:#ad7a66; }
+
+      /* ---------- 文字の見え方：滲んでから、輪郭を持つ ----------
+         行は「ぱっと」出さない。焦点が合うように、滲みとわずかな沈みから
+         ゆっくり輪郭を持って現れる。字間は明朝の冷たさが出るよう少し開け、
+         行間は詰めず、見出しほど字間を広げて「置かれた」感じにする。
+         全行が同じ明るさで揃わないよう、本文行の一部はJS側で薄く落とす */
+      .peak-lines p, .peak-scenes p{
+        letter-spacing:.045em; line-height:2.05;
+        filter:blur(7px); transform:translateY(4px);
+        transition:opacity 1.8s ease, filter 1.8s ease, transform 1.8s ease;
+      }
+      .peak-lines p.show, .peak-scenes p.show{ filter:blur(0); transform:none; }
+      .peak-big, .peak-theme{
+        filter:blur(10px);
+        transition:opacity 2.2s ease, filter 2.2s ease;
+      }
+      .peak-big.show, .peak-theme.show{ filter:blur(0); }
+      .peak-big{ letter-spacing:.09em; line-height:1.8; }
+      .peak-theme{ letter-spacing:.05em; line-height:2.25; }
+      .peak-scenes{ gap:17px; }
+      .peak-scenes p.scene-head{ letter-spacing:.2em; margin-top:36px; line-height:1.9; }
+      .peak-scenes p.call{ letter-spacing:.1em; }
+      .peak-lines p.check-head{ letter-spacing:.18em; }
+      .peak-scenes p.check, .peak-lines p.check{ line-height:2; }
+      .peak-note{ letter-spacing:.04em; line-height:2; }
+      @media (prefers-reduced-motion: reduce){
+        .peak-lines p, .peak-scenes p, .peak-big, .peak-theme{ filter:none !important; transform:none !important; }
+      }
+
+      /* ---------- 結果画面の余韻（ホラーが残るトーン） ---------- */
+      #result-bg{ position:fixed; inset:0; z-index:0; display:none; background:#050607; }
+      #result-bg img{ width:100%; height:100%; object-fit:cover; opacity:.17; filter:grayscale(.75) brightness(.55); transition:opacity 2.4s ease; }
+      /* 結果画面ギミック二段目：間を置いてから、背景の闇が少しだけ濃くなる */
+      body.tail-deep #result-bg img{ opacity:.3; }
+      body.aftermath #result-bg{ display:block; }
+      body.aftermath .ambient{ display:none; }
+      body.aftermath{
+        --bg:#050607; --surface:#111518; --surface2:#171c20;
+        --ink:#dde3de; --muted:#8f9791; --faint:#626b66;
+        --accent:#71837d; --accent-ink:#0b0e0f;
+        --line:#262c30; --bar-track:#22282c;
+        --shadow:0 10px 30px rgba(0,0,0,.5);
+      }
+      .still-note{ text-align:center; color:var(--faint); font-size:.82rem; margin-top:30px; letter-spacing:.06em; }
+      /* 結果画面のギミック：いちばん下まで読んだときだけ、もう1行ある */
+      .tail-line{
+        font-family:var(--font-horror); font-weight:700;
+        text-align:center; color:#e8b4a6; font-size:.98rem; line-height:2.1; letter-spacing:.05em;
+        margin:52px 0 0; opacity:0; transform:translateY(10px);
+        transition:opacity 1.6s ease, transform 1.6s ease;
+      }
+      /* 結果画面に残るホラーの余韻も、見出しだけは明朝で冷たくする（本文の診断書体は変えない） */
+      body.aftermath .type-name, body.aftermath .still-note{ font-family:var(--font-horror); }
+      .abyss h2, .abyss .closing, .abyss details summary{ font-family:var(--font-horror); }
+      .tail-line.show{ opacity:1; transform:none; }
+      /* 二段目：最初の一行は、しばらくしてから静かに書き換わる */
+      .tail-line.glitching{ animation:tailGlitch .45s steps(2) 2; }
+      @keyframes tailGlitch{
+        0%{ transform:translate(0,0); } 25%{ transform:translate(-3px,1px); }
+        50%{ transform:translate(3px,-1px); } 75%{ transform:translate(-1px,0); }
+        100%{ transform:none; }
+      }
+      .tail-line-2{ margin-top:30px; }
+      /* 二段目：画面の右端に、目の気配がゆっくり滲んで出て、消える */
+      .tail-eye{
+        position:fixed; right:-18px; bottom:7vh; z-index:1;
+        width:min(48vw,250px); height:auto;
+        opacity:0; transform:translateX(22px); pointer-events:none;
+        filter:brightness(.85) saturate(.55);
+        transition:opacity 2.8s ease, transform 2.8s ease;
+      }
+      .tail-eye.show{ opacity:.32; transform:none; }
+      @media (prefers-reduced-motion: reduce){
+        .tail-line.glitching{ animation:none; }
+        .tail-eye{ transition:none; }
+      }
+
+      /* ---------- 孤立行の回避 ----------
+         「距離は戻りませ／ん。」のように1文字だけ次の行へ落ちる折り返しを防ぐ。
+         text-wrap: pretty は行分割の際に末尾の孤立を避ける指定（未対応環境では無視される） */
+      .peak-lines p, .peak-scenes p, .peak-big, .peak-theme, .peak-note,
+      .q-text, .q-sub, .card p, .abyss .closing, .recall li, .tail-line,
+      .type-catch, .stage-head p, .intro p.lede, .opt{ text-wrap:pretty; }
+
+      /* ---------- 集計画面（ホラーパートの入り） ----------
+         最終回答のあとも、診断の画面・書体・色のまま「集計しています」という
+         通常フローを続ける。異常は、集計項目の内容だけに混ざる。
+         書体もレイアウトも診断パートと同一にし、ホラー側の staging は使わない */
+      .tally{ padding-top:2vh; transition:opacity 2.2s ease; }
+      .tally-list{ list-style:none; margin:0; padding:0; }
+      .tally-list li{
+        display:flex; justify-content:space-between; align-items:baseline; gap:14px;
+        padding:11px 0; border-bottom:1px dashed var(--line);
+        font-size:.95rem; color:var(--muted); line-height:1.6;
+      }
+      .tally-list li:last-child{ border-bottom:none; }
+      .tally-list li .t-text{ flex:1; min-width:0; overflow-wrap:anywhere; }
+      .tally-list li .t-state{ flex:none; color:var(--faint); font-size:.85rem; min-width:1.4em; text-align:right; }
+      .tally-list li.done{ color:var(--ink); }
+      .tally-list li.done .t-state{ color:var(--accent); font-weight:700; }
+      .tally-status{ margin:16px 0 0; font-size:.92rem; color:var(--muted); min-height:1.7em; }
+      .tally .progress{ margin-bottom:26px; }
+      /* 集計の終わり際：画面全体がゆっくり暗転する。設問カードが薄く残る
+         「読み込み不良」ではなく、集計画面ごと意図して闇に沈む入りにする */
+      .ambient{ transition:opacity 2.2s ease; }
+      body.tally-dim{ background:#000; }
+      body.tally-dim .ambient{ opacity:0; }
+      body.tally-dim #screen-tally{ opacity:0; }
+
+      /* ---------- 暫定結果／名前入力 ---------- */
+      .stage-head{ margin-top:4vh; }
+      .stage-head .kicker{ font-size:.8rem; letter-spacing:.3em; color:var(--muted); margin:0 0 10px; }
+      .stage-head h2{ font-size:1.5rem; font-weight:900; margin:0 0 10px; line-height:1.5; }
+      .stage-head p{ color:var(--muted); font-size:.95rem; margin:0 0 8px; }
+      .name-input{
+        width:100%; padding:17px 18px; font-size:1.1rem; font-family:inherit; color:var(--ink);
+        background:var(--surface); border:1.5px solid var(--line); border-radius:12px; margin:18px 0 12px;
+      }
+      .name-input:focus{ outline:none; border-color:var(--accent); }
+      .btn-skip{
+        display:block; width:100%; margin-top:10px; padding:14px; border:none; background:none;
+        color:var(--muted); font-size:.92rem; text-decoration:underline; text-underline-offset:4px;
+      }
+
+      /* ---------- 診断中 ---------- */
+      .quiz-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+      .qcount{ font-size:.85rem; color:var(--muted); font-variant-numeric:tabular-nums; letter-spacing:.06em; }
+      .qcount b{ color:var(--ink); font-size:1rem; }
+      .sound-toggle{
+        border:1px solid var(--line); background:var(--surface); color:var(--muted);
+        border-radius:999px; padding:6px 14px; font-size:.78rem; min-height:2.25rem;
+      }
+      .progress{ height:5px; background:var(--bar-track); border-radius:99px; overflow:hidden; margin-bottom:38px; }
+      .progress i{ display:block; height:100%; width:0%; background:var(--accent); border-radius:99px; transition:width .5s ease, background 1.2s ease; }
+      .q-label{ font-size:.8rem; color:var(--faint); letter-spacing:.2em; margin:0 0 8px; }
+      .q-text{ font-size:1.3rem; font-weight:700; line-height:1.6; margin:0 0 8px; min-height:3.2em; line-break:strict; overflow-wrap:anywhere; }
+      .q-sub{ font-size:.82rem; color:var(--muted); margin:0 0 18px; min-height:1.4em; }
+      .options{ display:grid; gap:12px; margin-top:10px; }
+      .opt{
+        text-align:left; width:100%; padding:20px 18px; border-radius:12px;
+        border:1.5px solid var(--line); background:var(--surface); color:var(--ink);
+        font-size:1.02rem; font-weight:500; line-height:1.55;
+        box-shadow:var(--shadow); transition:border-color .15s, transform .1s;
+        min-height:64px;
+      }
+      .opt:active{ transform:scale(.985); }
+      .opt.picked{ border-color:var(--accent); }
+      .opt:disabled{ opacity:.55; cursor:default; }
+      .feedback{
+        margin-top:22px; font-size:.92rem; color:var(--muted); min-height:1.8em;
+        opacity:0; transition:opacity .25s ease;
+      }
+      .feedback.show{ opacity:1; }
+      .quiz-foot{ margin-top:26px; display:flex; justify-content:flex-start; }
+      .btn-back{
+        border:none; background:none; color:var(--faint); font-size:.85rem; padding:10px 14px 10px 0;
+      }
+      .toast{
+        position:fixed; left:50%; bottom:calc(22px + env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(16px);
+        background:#22262a; color:#e8ebe9; font-size:.83rem; padding:12px 18px; border-radius:10px;
+        max-width:min(92vw,520px); text-align:center; opacity:0; pointer-events:none; transition:opacity .4s, transform .4s;
+        z-index:50; box-shadow:0 12px 32px rgba(0,0,0,.3);
+      }
+      .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+      /* ---------- 結果 ---------- */
+      .result-head{ margin-top:2vh; }
+      .result-head .kicker{ font-size:.8rem; letter-spacing:.3em; color:var(--muted); margin:0 0 10px; }
+      .type-code{ font-size:2.6rem; font-weight:900; letter-spacing:.22em; margin:0; line-height:1.2; font-variant-numeric:tabular-nums; }
+      .type-name{ font-size:1.45rem; font-weight:900; margin:6px 0 4px; line-height:1.5; overflow-wrap:anywhere; }
+      .result-head .kicker{ overflow-wrap:anywhere; }
+      .type-catch{ color:var(--muted); font-size:.98rem; margin:0 0 22px; }
+      .card{
+        background:var(--surface); border:1px solid var(--line); border-radius:18px;
+        padding:24px 22px; box-shadow:var(--shadow); margin-bottom:18px;
+      }
+      .card h2{ font-size:1.02rem; font-weight:900; margin:0 0 12px; letter-spacing:.04em; }
+      .card p{ margin:0 0 10px; font-size:.95rem; }
+      .card p:last-child{ margin-bottom:0; }
+      .axis-row{ margin:14px 0; }
+      .axis-top{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:.82rem; color:var(--muted); margin-bottom:5px; line-height:1.5; }
+      .axis-top>span{ min-width:0; }
+      .axis-top>span:first-child, .axis-top>span:last-child{ flex:none; white-space:nowrap; }
+      .axis-top>span:nth-child(2){ text-align:center; overflow-wrap:anywhere; }
+      .axis-top b{ color:var(--ink); }
+      @media (max-width:480px){ .axis-top{ font-size:.76rem; gap:6px; } }
+      .axis-bar{ height:9px; background:var(--bar-track); border-radius:99px; position:relative; overflow:hidden; }
+      .axis-bar i{ position:absolute; top:0; bottom:0; background:var(--accent); border-radius:99px; transition:background 1.2s ease; }
+      .axis-note{ font-size:.92rem; margin:16px 0 0; padding-top:14px; border-top:1px dashed var(--line); }
+      .taglist{ list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+      .taglist li{ background:var(--surface2); border-radius:9px; padding:9px 14px; font-size:.92rem; }
+      .two-col{ display:grid; gap:18px; margin-bottom:18px; }
+      .two-col .card{ margin-bottom:0; }
+      @media (min-width:560px){ .two-col{ grid-template-columns:1fr 1fr; } }
+      .stat-row{ display:flex; justify-content:space-between; align-items:baseline; gap:14px; font-size:.92rem; padding:8px 0; border-bottom:1px dashed var(--line); line-height:1.6; }
+      .stat-row:last-child{ border-bottom:none; }
+      .stat-row span{ color:var(--muted); flex:1; min-width:0; }
+      .stat-row b{ flex:none; text-align:right; overflow-wrap:anywhere; }
+      .share-row{ display:grid; gap:10px; }
+      @media (min-width:560px){ .share-row{ grid-template-columns:1fr 1fr; } }
+      .btn-sub{
+        padding:15px 16px; border-radius:12px; border:1.5px solid var(--accent); background:transparent;
+        color:var(--accent); font-weight:700; font-size:.95rem; transition:background 1.2s ease, color 1.2s ease, border-color 1.2s ease;
+      }
+      .btn-ghost{
+        padding:15px 16px; border-radius:12px; border:1.5px solid var(--line); background:var(--surface);
+        color:var(--ink); font-weight:700; font-size:.95rem;
+      }
+      .copied{ font-size:.82rem; color:var(--accent); min-height:1.5em; text-align:center; margin-top:6px; }
+
+      /* ---------- 内訳（反転パート） ---------- */
+      .abyss{
+        background:var(--dark-panel); color:var(--dark-ink); border-radius:6px;
+        padding:30px 24px 34px; margin:44px 0 18px;
+        font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+      }
+      .abyss h2{ font-size:.95rem; font-weight:700; letter-spacing:.25em; margin:0 0 6px; color:var(--dark-ink); }
+      .abyss .abyss-sub{ font-size:.8rem; color:var(--dark-muted); margin:0 0 22px; font-family:inherit; }
+      .code-row{
+        display:flex; gap:14px; align-items:flex-start; padding:13px 0;
+        border-bottom:1px solid #23282a; font-size:.9rem; line-height:1.7;
+      }
+      .code-row:last-of-type{ border-bottom:none; }
+      .code-row .c{ font-size:1.3rem; font-weight:700; width:1.4em; flex:none; color:#eef2ef; line-height:1.45; }
+      .code-row>span:last-child{ flex:1; min-width:0; overflow-wrap:anywhere; }
+      .code-row .what{ color:var(--dark-muted); font-size:.78rem; display:block; margin-bottom:2px; line-height:1.5; }
+      .code-row.missing .c, .code-row.missing .val{ color:#5d6660; }
+      .abyss .closing{ margin-top:26px; font-size:.95rem; line-height:2.1; }
+      .abyss .closing .last{ color:#e8b4a6; }
+      .recall{ margin:0; padding:0; list-style:none; }
+      .recall li{ padding:12px 0; border-bottom:1px solid #23282a; font-size:.85rem; line-height:1.8; overflow-wrap:anywhere; }
+      .abyss .closing{ overflow-wrap:anywhere; }
+      .recall li:last-child{ border-bottom:none; }
+      .recall .rq{ color:var(--dark-muted); font-size:.75rem; display:block; }
+      .acro{ margin:0; padding:0; list-style:none; }
+      .acro li{ font-size:.88rem; padding:5px 0; color:var(--dark-muted); }
+      .acro li b{ color:#eef2ef; font-size:1.02rem; }
+      .acro-answer{ margin-top:16px; font-size:1rem; letter-spacing:.3em; color:#eef2ef; }
+      details.abyss-details{ margin-top:22px; border-top:1px solid #23282a; padding-top:16px; }
+      details.abyss-details summary{
+        cursor:pointer; font-size:.85rem; color:var(--dark-ink); padding:10px 0; min-height:2.25rem;
+        list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px; line-height:1.6;
+      }
+      details.abyss-details summary::-webkit-details-marker{ display:none; }
+      details.abyss-details summary::after{ content:"＋"; flex:none; color:var(--dark-muted); }
+      details.abyss-details[open ] summary::after{ content:"－"; }
+      .restart-wrap{ text-align:center; margin-top:34px; }
+      .hidden{ display:none !important; }
+      .fade-in{ animation:fadeIn .6s ease both; }
+      @keyframes fadeIn{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:none;} }
+      @media (prefers-reduced-motion: reduce){
+        .fade-in{ animation:none; }
+        *{ transition:none !important; }
+        .ambient .blob, .intro-viz .orb, .peak-grain, .peak-face,
+        .peak.on .peak-shade, .peak.on .peak-content, .peak-advance,
+        .peak.shaking .peak-content, .peak.shaking .peak-shade{ animation:none !important; }
+        .peak-photos img.show{ animation:none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ambient" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="blob b4"></span></div>
+    <div id="result-bg" aria-hidden="true"><img src="assets/horror-room.webp" alt="" /></div>
+    <main class="wrap">
+
+      <!-- 導入 -->
+      <section id="screen-intro" class="intro">
+        <p class="site-name">せいかくしんだん</p>
+        <div class="intro-viz" aria-hidden="true">
+          <span class="orb o1">E/I</span><span class="orb o2">S/N</span><span class="orb o3">T/F</span><span class="orb o4">J/P</span>
+          <span class="viz-cap">4つの軸で、あなたを読み解きます</span>
+        </div>
+        <h1>あなたの性格を、<br />16タイプで診断します</h1>
+        <p class="lede">全32問、すべて二択。当てはまる方を、直感で選んでください。</p>
+        <p class="lede">4つの軸から、あなたの性格の傾向を詳しく読み解きます。</p>
+        <p class="lede">あなたのことを、もっと知るための診断です。</p>
+        <div class="meta">
+          <span>全32問</span><span>所要時間 約4分</span><span>16タイプ診断</span><span>結果カード付き</span>
+        </div>
+        <div class="intro-name">
+          <label for="name-input">結果に表示する名前（任意）</label>
+          <input class="name-input" id="name-input" type="text" maxlength="20" placeholder="名前（任意）" autocomplete="off" />
+        </div>
+        <button class="btn-primary" id="btn-start" type="button">診断をはじめる</button>
+        <p class="fineprint">※ 回答データが外部に送信されることはありません。<br />※ 結果はこの画面の中だけで表示されます。</p>
+        <p class="return-line hidden" id="return-line">—— また、来ましたね。前回のことも、覚えています。</p>
+      </section>
+
+      <!-- 診断中 -->
+      <section id="screen-quiz" class="hidden">
+        <div class="quiz-head">
+          <p class="qcount"><b id="q-now">1</b> / <span id="q-total">32</span> 問</p>
+          <button class="sound-toggle" id="btn-sound" type="button">音：オン</button>
+        </div>
+        <div class="progress"><i id="progress-bar"></i></div>
+        <p class="q-label">QUESTION</p>
+        <p class="q-text" id="q-text"></p>
+        <p class="q-sub" id="q-sub"></p>
+        <div class="options">
+          <button class="opt" id="opt-a" type="button"></button>
+          <button class="opt" id="opt-b" type="button"></button>
+        </div>
+        <p class="feedback" id="feedback" aria-live="polite"></p>
+        <div class="quiz-foot">
+          <button class="btn-back" id="btn-back" type="button">← もどる</button>
+        </div>
+      </section>
+
+      <!-- 集計（最終回答のあと。診断の通常フローの顔をしたまま、小さく壊れ始める入り） -->
+      <section id="screen-tally" class="hidden tally">
+        <div class="stage-head">
+          <p class="kicker">RESULT</p>
+          <h2>結果を集計しています</h2>
+          <p>そのまま、少しだけお待ちください。</p>
+        </div>
+        <div class="progress"><i id="tally-bar"></i></div>
+        <div class="card">
+          <ul class="tally-list" id="tally-list"></ul>
+          <p class="tally-status" id="tally-status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <!-- 暫定結果（Q22のあと、Q23の前に見せる） -->
+      <section id="screen-interim" class="hidden">
+        <div class="stage-head">
+          <p class="kicker">ここまでの暫定結果</p>
+          <h2><span id="interim-count">22</span>問の回答から、<br />ここまで見えています</h2>
+          <p>最終結果ではありません。ここから残り10問で、精度を上げていきます。</p>
+        </div>
+        <div class="card">
+          <h2>いまの傾向</h2>
+          <div id="interim-axes"></div>
+          <p class="axis-note" id="interim-note"></p>
+        </div>
+        <button class="btn-primary" id="btn-interim-next" type="button">残りの質問に進む</button>
+      </section>
+
+      <!-- 結果 -->
+      <section id="screen-result" class="hidden">
+        <div class="result-head">
+          <p class="kicker" id="r-forname">あなたのタイプは</p>
+          <p class="type-code" id="r-code">----</p>
+          <p class="type-name" id="r-name"></p>
+          <p class="type-catch" id="r-catch"></p>
+        </div>
+
+        <div class="card">
+          <h2>タイプ解説</h2>
+          <p id="r-desc"></p>
+        </div>
+
+        <div class="card">
+          <h2>4つの軸</h2>
+          <div id="r-axes"></div>
+          <p class="axis-note" id="r-axis-note"></p>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <h2>あなたの強み</h2>
+            <ul class="taglist" id="r-strong"></ul>
+          </div>
+          <div class="card">
+            <h2>気をつけたいこと</h2>
+            <ul class="taglist" id="r-weak"></ul>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>診断データ</h2>
+          <div class="stat-row"><span>回答にかかった平均時間</span><b id="r-avg">-</b></div>
+          <div class="stat-row"><span>いちばん迷った質問</span><b id="r-hesitate">-</b></div>
+          <div class="stat-row"><span>診断が終了した時刻</span><b id="r-clock">-</b></div>
+        </div>
+
+        <div class="card">
+          <h2>結果を共有する</h2>
+          <div class="share-row">
+            <button class="btn-sub" id="btn-copy" type="button">結果テキストをコピー</button>
+            <button class="btn-ghost" id="btn-card" type="button">結果カードを画像で保存</button>
+          </div>
+          <p class="copied" id="copy-note"></p>
+        </div>
+
+        <!-- 反転パート -->
+        <div class="abyss" id="abyss">
+          <h2>タイプコードの内訳</h2>
+          <p class="abyss-sub">—— さきほどの4文字は、性格のコードではありませんでした。これは、迎えに行けるかどうかの内訳です。</p>
+          <div id="r-breakdown"></div>
+          <p class="closing" id="r-closing"></p>
+
+          <details class="abyss-details">
+            <summary>さっきの場面で、起きたこと</summary>
+            <ul class="recall" id="r-scenes"></ul>
+          </details>
+
+          <details class="abyss-details">
+            <summary>あの質問たちは、何だったのか</summary>
+            <ul class="recall" id="r-recall"></ul>
+          </details>
+
+          <details class="abyss-details">
+            <summary>診断中の「記録しました」を、読み直す</summary>
+            <ul class="acro" id="r-acro"></ul>
+            <p class="acro-answer" id="r-acro-answer"></p>
+          </details>
+        </div>
+
+        <div class="restart-wrap">
+          <button class="btn-ghost" id="btn-restart" type="button">もう一度診断する</button>
+        </div>
+        <p class="still-note">このページは閉じても大丈夫です。結果は、もう決まっています。</p>
+        <p class="tail-line" id="tail-line" aria-hidden="true">—— 最後まで、読みましたね。<br />読んだことも、渡したもののうちです。</p>
+        <p class="tail-line tail-line-2" id="tail-line-2" aria-hidden="true">—— 読み終わったのに、まだここにいる。<br />それも、覚えました。</p>
+        <img class="tail-eye" id="tail-eye" src="assets/horror-face-alt.webp" alt="" aria-hidden="true" />
+        <div id="tail-sentinel" aria-hidden="true" style="height:2px"></div>
+      </section>
+
+    </main>
+    <div class="peak" id="peak" aria-hidden="true">
+      <div class="peak-photos" aria-hidden="true">
+        <img id="peak-img-eye" src="assets/horror-face-alt.webp" alt="" />
+        <img id="peak-img-door" src="assets/horror-entrance.webp" alt="" />
+        <img id="peak-img-room" src="assets/horror-room.webp" alt="" />
+        <img id="peak-img-street" src="assets/horror-corridor.webp" alt="" />
+        <img id="peak-img-corridor-b" src="assets/horror-corridor-b.webp" alt="" />
+        <img id="peak-img-peephole" src="assets/horror-peephole.webp" alt="" />
+        <img id="peak-img-outside" src="assets/horror-outside.webp" alt="" />
+      </div>
+      <div id="peak-flash" aria-hidden="true"></div>
+      <div class="peak-shade" aria-hidden="true"></div>
+      <div id="peak-veil" aria-hidden="true"></div>
+      <div class="peak-grain" aria-hidden="true"></div>
+      <img class="peak-face" id="peak-face" src="assets/horror-face.webp" alt="" aria-hidden="true" />
+      <img class="peak-face peak-face-alt" id="peak-face-alt" src="assets/horror-face-alt.webp" alt="" aria-hidden="true" />
+      <div class="lid lid-t" aria-hidden="true"></div>
+      <div class="lid lid-b" aria-hidden="true"></div>
+      <div class="peak-content" id="peak-content">
+        <div class="peak-lines" id="peak-lines"></div>
+        <p class="peak-big" id="peak-big"></p>
+        <p class="peak-theme" id="peak-theme"></p>
+        <div class="peak-scenes" id="peak-scenes"></div>
+        <div class="peak-choices hidden" id="peak-choices">
+          <button id="choice-truth" type="button"></button>
+          <button id="choice-lie" type="button"></button>
+        </div>
+        <p class="peak-note" id="peak-note"></p>
+        <p class="peak-big" id="peak-outcome"></p>
+        <p class="peak-theme" id="peak-outcome-sub"></p>
+        <button class="peak-proceed hidden" id="peak-proceed" type="button">診断結果を見る</button>
+        <div class="peak-distance hidden" id="peak-distance" aria-live="polite">
+          <span id="peak-dist-label">距離 —— 482 m</span>
+          <div class="peak-dist-track"><i id="peak-dist-bar" style="width:100%"></i></div>
+        </div>
+        <button class="peak-advance hidden" id="peak-advance" type="button">すすむ</button>
+        <p class="peak-complicity hidden" id="peak-complicity">押すのは、あなたの手です。</p>
+        <div class="peak-hold hidden" id="peak-hold">
+          <p class="peak-hold-label" id="peak-hold-label">ドアが、押されています</p>
+          <div class="peak-hold-track"><i id="peak-hold-bar"></i></div>
+          <button class="peak-hold-btn" id="peak-hold-btn" type="button">押さえる</button>
+          <p class="peak-hold-sub">連打して、押さえ続けてください</p>
+        </div>
+      </div>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+    <canvas id="card-canvas" width="1200" height="630" class="hidden"></canvas>
+
+    <script>
+    /* ================= データ ================= */
+    var QUESTIONS = [
+      { q:"休みの日、いちばん元気を取り戻せるのは？", a:"友達と出かけて過ごす", b:"家で一人、静かに過ごす", pa:"E", pb:"I" },
+      { q:"説明を聞くとき、まず知りたいのは？", a:"具体的な手順や事実", b:"全体のイメージや意味", pa:"S", pb:"N" },
+      { q:"意見がぶつかったとき、大事にしたいのは？", a:"筋の通った正しさ", b:"その場の気持ちと空気", pa:"T", pb:"F" },
+      { q:"旅行の計画は、どっち派？", a:"現地で決めるのが楽しい", b:"先に細かく決めておきたい", pa:"P", pb:"J" },
+      { q:"大人数の集まりが終わったあとは？", a:"一人になって、充電したい", b:"まだ元気。余韻を楽しみたい", pa:"I", pb:"E" },
+      { q:"買い物で決め手になるのは？", a:"ピンときた直感", b:"実物を見て確かめた安心感", pa:"N", pb:"S" },
+      { q:"友達が落ち込んでいたら、まずどうする？", a:"原因を一緒に考える", b:"話を聞いて、そばにいる", pa:"T", pb:"F" },
+      { q:"鍵や財布の置き場所は？", a:"いつも決まっている", b:"その時々で違う", pa:"J", pb:"P", flagA:"key" },
+      { q:"考えをまとめるときは？", a:"人と話すとまとまってくる", b:"一人で考えてから話す", pa:"E", pb:"I" },
+      { q:"頼りにされやすいのは、どっち？", a:"新しいアイデアを出すこと", b:"正確で細かい作業", pa:"N", pb:"S" },
+      { q:"小さな嘘も、つくべきではないと思う？", a:"そう思う", b:"時と場合による", pa:"F", pb:"T", flagA:"lie" },
+      { q:"締め切りのある作業は？", a:"追い込まれてからが強い", b:"早めに終わらせておきたい", pa:"P", pb:"J" },
+      { q:"初対面の人とは？", a:"少し様子を見てしまう", b:"自分から話しかけられる", pa:"I", pb:"E" },
+      { q:"暗い場所にいると？", a:"少し落ち着かない", b:"むしろ落ち着く", pa:"S", pb:"N", flagA:"dark" },
+      { q:"仕事で評価されたいのは？", a:"人柄と信頼", b:"成果と実力", pa:"F", pb:"T" },
+      { q:"予定が急に変わると？", a:"正直、少し困る", b:"臨機応変に楽しめる", pa:"J", pb:"P" },
+      { q:"悩みごとがあるときは？", a:"誰かに話すとすっきりする", b:"自分の中で整理したい", pa:"E", pb:"I" },
+      { q:"道に迷ったら、どうする？", a:"方角の勘で進んでみる", b:"地図で現在地を確認する", pa:"N", pb:"S" },
+      { q:"納得できないルールがあったら？", a:"それでも守るのが筋", b:"事情があれば例外もあり", pa:"T", pb:"F" },
+      { q:"部屋や机の状態は？", a:"多少散らかっていても平気", b:"整っていると落ち着く", pa:"P", pb:"J" },
+      { q:"心地いい人間関係は？", a:"狭く、深く、じっくり", b:"広く、浅く、気軽に", pa:"I", pb:"E" },
+      { q:"ここまで答えてきて、この診断に違和感は？", a:"ない。このまま続ける", b:"ある。少し、おかしい", pa:"S", pb:"N", flagB:"seer",
+        fbA:"気のせいです。そのまま続けましょう", fbB:"……そうですか。覚えました" },
+      { q:"いま見た暫定結果、当たっていると思う？", sub:"さきほど表示した「いまの傾向」について答えてください", a:"思う。よく当たっている", b:"まだ分からない・違う気がする", pa:"F", pb:"T", flagA:"trust" },
+      { q:"買い物に行くときは？", a:"リストを作ってから行く", b:"店で見てから決める", pa:"J", pb:"P" },
+      { q:"今、この診断を受けている環境は？", a:"一人でいる", b:"近くに人がいる", pa:"I", pb:"E", flagA:"alone",
+        fbA:"一人ですね", fbB:"人がいるんですね" },
+      { q:"今いる部屋の明るさは？", a:"明るいほう", b:"暗いほう・薄暗い", pa:"S", pb:"N", flagB:"darknow" },
+      { q:"背後が気になって、振り返りたくなることがある？", a:"ある", b:"ない", pa:"F", pb:"T", flagA:"behind",
+        fbA:"振り返らなくて、大丈夫です", fbB:"そうですか" },
+      { q:"部屋の鍵やドアの施錠は？", a:"もう閉めてある", b:"閉めていない／確認していない", pa:"J", pb:"P", flagA:"locked" },
+      { q:"診断の結果は、どうしたい？", a:"もう少し考えてから知りたい", b:"今すぐ知りたい", pa:"P", pb:"J" },
+      { q:"もし、この診断が「全部お見通し」だったら？", a:"すごいと思う", b:"少し怖い", pa:"T", pb:"F", flagB:"fear", fbA:"お見通し、ですから", fbB:"お見通し、ですから" },
+      { q:"この結果は、どうしたい？", a:"誰かに見せたい・共有したい", b:"一人でしまっておきたい", pa:"E", pb:"I" },
+      { q:"さいごの質問です。", a:"診断結果を表示する", b:"診断結果を表示する", pa:null, pb:null, fbA:"では、表示します", fbB:"では、表示します" }
+    ];
+
+    /* Q1〜Q13のフィードバック。頭文字を並べると—— */
+    var FEEDBACK = [
+      "あ、はい。記録しました",
+      "なるほど。記録しました",
+      "たしかに、そうですね",
+      "のんびり答えてください",
+      "ここまで順調です",
+      "とくに迷いはなさそうですね",
+      "はい、よく分かりました",
+      "わかりやすい人ですね",
+      "考えなくても、答えられますね",
+      "りかいしました",
+      "まだ、半分もいっていません",
+      "しっかり記録しました",
+      "たくさん知ることができました",
+      "覚えました",
+      "覚えました",
+      "覚えました。はい、覚えました",
+      "もう覚えました",
+      "覚えました",
+      "覚えました",
+      "覚えました。ぜんぶ",
+      "保存しています",
+      "覚えました",
+      "信用、ありがとうございます",
+      "覚えました",
+      "一人ですね",
+      "明るさも、覚えました",
+      "振り返らなくて、大丈夫です",
+      "鍵のことも、覚えました",
+      "結果は、もうできています",
+      "お見通し、ですから",
+      "共有しても、構いません",
+      "では、表示します"
+    ];
+
+    var POLE_TEXT = {
+      E:"人と過ごすことでエネルギーが湧くタイプ。場の空気を動かす力があり、初対面でも距離を縮めるのが早い。",
+      I:"一人の時間でエネルギーを回復するタイプ。深く考える力があり、少数の相手とじっくり向き合う関係を大切にする。",
+      S:"五感で確かめた事実を信頼する、現実感覚の持ち主。地に足のついた判断で、周囲から頼られることが多い。",
+      N:"物事の背景や可能性を読み取る直感派。先の展開を想像するのが得意で、変化の兆しにいち早く気づく。",
+      T:"感情より筋道で判断するタイプ。公平さと一貫性を重んじ、冷静な決断が求められる場面で力を発揮する。",
+      F:"人の気持ちを優先して動ける共感派。場の調和を保つ力があり、相談役になることが多い。",
+      J:"計画を立てて進めるのが得意なタイプ。見通しが立つと安心でき、約束や期限をきっちり守る。",
+      P:"状況に合わせて動ける柔軟なタイプ。予定外の出来事にも強く、その場の最適解を見つけるのが上手い。"
+    };
+
+    var AXES = [
+      { pair:["E","I"], la:"外向", lb:"内向", name:"エネルギーの向き" },
+      { pair:["S","N"], la:"現実", lb:"直感", name:"情報の受け取り方" },
+      { pair:["T","F"], la:"論理", lb:"感情", name:"判断のしかた" },
+      { pair:["J","P"], la:"計画", lb:"柔軟", name:"物事の進め方" }
+    ];
+
+    var TYPES = {
+      ISTJ:{ name:"堅実な番人", catch:"約束と段取りを守る、信頼の人", desc:"責任感が強く、一度引き受けたことは最後までやり切る。派手さはないが、積み重ねの正確さで周囲の信頼を集めるタイプです。感情を表に出すより、結果で示すことを好みます。", strong:["責任感の強さ","継続力","細部への注意力"], weak:["急な変更への弱さ","気持ちを言葉にする少なさ"] },
+      ISFJ:{ name:"静かな守り手", catch:"目立たず支える、縁の下の力持ち", desc:"人の困りごとにいち早く気づき、静かに手を差し伸べる。穏やかですが、守りたいもののためには芯の強さを見せるタイプです。", strong:["気配りの細やかさ","忍耐力","実務の確かさ"], weak:["断ることの苦手さ","自分を後回しにしがち"] },
+      INFJ:{ name:"深読みの観察者", catch:"人の本音と先を読む、静かな理想家", desc:"表面の言葉より、その奥にある意図を読む。少数の深い関係を好み、静かに、しかし確固たる理想を持っているタイプです。", strong:["洞察力","共感力","長期的な視点"], weak:["抱え込みやすさ","理想と現実の差に悩みがち"] },
+      INTJ:{ name:"静かな設計者", catch:"全体を設計してから動く、戦略家", desc:"物事を仕組みで捉え、無駄を削ぎ落として最適化する。一人の時間を大切にし、長期戦でこそ真価を発揮するタイプです。", strong:["戦略的思考","独立心","改善への意欲"], weak:["感情面のフォローの少なさ","結論を急ぐ一面"] },
+      ISTP:{ name:"冷静な職人", catch:"手を動かして理解する、クールな実践派", desc:"理屈より実践。仕組みを分解して理解するのが好きで、トラブルの現場でも冷静に対処できるタイプです。", strong:["問題解決力","冷静さ","器用さ"], weak:["飽きっぽさ","気持ちを言葉にしないこと"] },
+      ISFP:{ name:"穏やかな感性家", catch:"今この瞬間の心地よさを大切にする人", desc:"穏やかで争いを好みませんが、自分の感性には正直。言葉より、行動や態度で気持ちを表すタイプです。", strong:["感受性","柔軟さ","空気を読む力"], weak:["長期計画の苦手さ","対立を避けすぎること"] },
+      INFP:{ name:"夢見る理想家", catch:"心の中に確かな世界を持つ、理想主義者", desc:"外からは穏やかに見えて、内側には強い価値観と情熱がある。意味のあることにだけ、全力になれるタイプです。", strong:["想像力","誠実さ","価値観への一貫性"], weak:["段取りの苦手さ","傷つきやすさ"] },
+      INTP:{ name:"探求する分析家", catch:"「なぜ？」を掘り続ける、知の探検家", desc:"仕組みと理論への好奇心が尽きない。興味の対象には没頭し、独自の視点で物事を組み立て直すタイプです。", strong:["論理的思考","独創性","没頭する集中力"], weak:["実行に移るまでの遅さ","興味の偏り"] },
+      ESTP:{ name:"俊敏な挑戦者", catch:"まず動く。現場で勝つタイプ", desc:"行動が早く、状況判断が鋭い。リスクを楽しめる度胸があり、修羅場ほど冴える実践派です。", strong:["行動力","適応力","度胸"], weak:["退屈への弱さ","先の計画の軽視"] },
+      ESFP:{ name:"場の表現者", catch:"いるだけで場が明るくなる、ムードメーカー", desc:"人と楽しさを共有するのが天職。感受性が豊かで、今この瞬間を全力で味わうタイプです。", strong:["社交性","明るさ","人を見る観察眼"], weak:["地道な継続の苦手さ","気分の波"] },
+      ENFP:{ name:"自由な発想家", catch:"可能性に目を輝かせる、アイデアの泉", desc:"新しい人・新しいアイデアに出会うと目が輝く。熱量で周囲を巻き込み、場に風を起こすタイプです。", strong:["発想力","人懐っこさ","巻き込む熱量"], weak:["飽きやすさ","細部の詰めの甘さ"] },
+      ENTP:{ name:"機転の討論家", catch:"常識を疑う、機知の挑発者", desc:"議論とひらめきが燃料。既存のやり方に疑問を持ち、より面白い解法を探し続けるタイプです。", strong:["機転の速さ","発想の転換","度胸"], weak:["継続の苦手さ","挑発しすぎる一面"] },
+      ESTJ:{ name:"頼れる統率者", catch:"段取りと実行の、現場リーダー", desc:"物事を前に進める推進力の持ち主。ルールと責任を重んじ、頼られると力を発揮するタイプです。", strong:["実行力","責任感","判断の速さ"], weak:["融通の利かなさ","感情面への配慮不足"] },
+      ESFJ:{ name:"気配りの世話役", catch:"みんなの安心を作る、調整役", desc:"周囲の調和と実務の両方を担える人。人の役に立つことに喜びを感じ、場を回すのが上手いタイプです。", strong:["協調性","実務能力","面倒見のよさ"], weak:["批判への敏感さ","自分の希望を言い出しにくいこと"] },
+      ENFJ:{ name:"人を導く共感者", catch:"人の成長に本気になれる、導き手", desc:"人の可能性を見抜き、背中を押すのが上手い。自分のことより、周囲の幸せを先に考えるタイプです。", strong:["リーダーシップ","共感力","言語化のうまさ"], weak:["抱え込みすぎ","自分を犠牲にしがち"] },
+      ENTJ:{ name:"大胆な指揮官", catch:"目標に向かって迷わない、決断の人", desc:"大きな目標を掲げ、人と資源を動かして実現する。困難な局面ほど判断が冴えるタイプです。", strong:["決断力","統率力","長期戦略"], weak:["押しの強さ","弱音を見せにくいこと"] }
+    };
+    /* ================= ロジック ================= */
+    var $ = function(id){ return document.getElementById(id); };
+    var state, snapshots, qStartAt, hiddenAt, soundOn;
+    var awayCount = 0, awayLongest = 0, peakPlayed = false, peakTimers = [];
+    var peakLie = null; /* 最後の質問でどう答えたか："deceived"（嘘で追い返した）／"deceived-in"（嘘で招き入れた）／"truth"／null（未到達） */
+    var tailShown = false, tailMaxScroll = 0, tailStage = 0, tailRun = 0; /* 結果画面ギミック用（tailStage: 0=未発動 1=二段目進行中 2=完了。tailRun は再診断のたびに進み、前回の残タイマーを無効化する） */
+    var droneNodes = null, approachIdleTimer = null; /* 接近エンジン用：ドローン音と放置タイマー */
+    var faceFired = false; /* 対面の急接近は、一度の診断で一度だけ発動する */
+    var roomToneNodes = null; /* 無音ではなく「静まり返った」状態を作る、かすかな部屋の気配 */
+    var titleEroded = false; /* クライマックス後、タブタイトルが静かに変わる */
+    var returningVisitor = false; /* 再訪かどうか（この端末だけの記録） */
+    var heartbeatTimer = null, heartbeatStage = 0; /* 心拍バイブ：接近とともに速く、不規則になる */
+    var secondFaceDone = false; /* 対面の二度目は、一度の診断で一度だけ */
+
+    /* 扉が開くかどうかは、どこでもこの1つの判定で統一する：
+       施錠していない（Q28でB）か、鍵の場所が判明している（Q8でA）なら開く */
+    function doorOpen(){ return !state.flags.locked || !!state.flags.key; }
+
+    function freshState(){
+      return {
+        idx: 0,
+        counts: { E:0, I:0, S:0, N:0, T:0, F:0, J:0, P:0 },
+        flags: {},
+        answers: [],
+        times: [],
+        feedbacks: [],
+        userName: "",
+        interimShown: false
+      };
+    }
+    function esc(s){
+      return String(s).replace(/[&<>"']/g, function(c){
+        return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+      });
+    }
+
+    /* ---------- 音響マスター：全ての音は「部屋」を通してから出す ----------
+       単音を直接スピーカーに出すと安っぽくなる。生成したインパルス応答の
+       コンボルバ（残響）とコンプレッサを通し、乾いた音と残響を混ぜて出す。
+       個別の音は masterIn() に繋ぐこと */
+    var audioCtx = null, masterBus = null, wetBus = null;
+    function makeImpulse(dur, decay){
+      var rate = audioCtx.sampleRate, len = Math.floor(rate * dur);
+      var buf = audioCtx.createBuffer(2, len, rate);
+      for(var ch = 0; ch < 2; ch++){
+        var d = buf.getChannelData(ch);
+        for(var i = 0; i < len; i++){
+          d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+        }
+      }
+      return buf;
+    }
+    function ensureAudio(){
+      if(!audioCtx){
+        try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ audioCtx = null; }
+        if(audioCtx){
+          try{
+            var comp = audioCtx.createDynamicsCompressor();
+            comp.threshold.value = -18; comp.knee.value = 22; comp.ratio.value = 8;
+            comp.connect(audioCtx.destination);
+            masterBus = audioCtx.createGain(); masterBus.gain.value = 0.9;
+            masterBus.connect(comp);
+            var conv = audioCtx.createConvolver();
+            conv.buffer = makeImpulse(2.9, 2.6);
+            wetBus = audioCtx.createGain(); wetBus.gain.value = 0.5;
+            wetBus.connect(conv); conv.connect(comp);
+          }catch(e){ masterBus = null; wetBus = null; }
+        }
+      }
+      if(audioCtx && audioCtx.state === "suspended"){ audioCtx.resume(); }
+    }
+    function out(node, wetAmt){
+      /* node をドライ（マスター）とウェット（残響）の両方へ。wetAmt 0..1 */
+      if(!audioCtx) return;
+      var dest = masterBus || audioCtx.destination;
+      node.connect(dest);
+      if(wetBus && wetAmt){
+        var wg = audioCtx.createGain(); wg.gain.value = wetAmt;
+        node.connect(wg); wg.connect(wetBus);
+      }
+    }
+    function noiseBuffer(seconds, brown){
+      var rate = audioCtx.sampleRate, len = Math.floor(rate * seconds);
+      var buf = audioCtx.createBuffer(1, len, rate);
+      var d = buf.getChannelData(0);
+      var last = 0;
+      for(var i = 0; i < len; i++){
+        var w = Math.random() * 2 - 1;
+        if(brown){ last = (last + 0.02 * w) / 1.02; d[i] = last * 3.2; }
+        else { d[i] = w; }
+      }
+      return buf;
+    }
+    /* UIクリックの detune：おなじみの心地いい音を、質問が進む（＝接近が進む）ごとに
+       数%ずつだけ音程を下げていく。新しい音は足さない。「いつもと同じ音が、少しだけ違う」 */
+    function uiDetune(){
+      if(!state) return 1;
+      var p = Math.min(1, state.idx / 32);
+      return Math.pow(2, (-1.7 * p) / 12); /* 最終盤で約 -1.7 半音（約9.3%）。気づくか気づかないかの境目を、少しだけ越える */
+    }
+    /* UIの小さな音も、素のビープではなく残響を通した鈍い打撃にする */
+    function blip(freq, dur, gain){
+      if(!soundOn || !audioCtx) return;
+      try{
+        var t = audioCtx.currentTime;
+        var f0 = freq * uiDetune();
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        var f = audioCtx.createBiquadFilter();
+        o.type = "triangle"; o.frequency.value = f0;
+        f.type = "lowpass"; f.frequency.value = Math.min(2400, f0 * 3);
+        g.gain.setValueAtTime(gain, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(f); f.connect(g); out(g, 0.5);
+        o.start(t); o.stop(t + dur + 0.02);
+      }catch(e){}
+    }
+    function stopTick(){ /* 診断中の秒針音は廃止（画面も音も、最後まで通常のまま） */ }
+
+    /* ---------- 接近エンジンの音とバイブ（主役） ---------- */
+    /* 低く続くドローン：接近の段階が進むほど、わずかに大きくなる */
+    function startDrone(){
+      if(!soundOn) return;
+      ensureAudio();
+      if(!audioCtx || droneNodes) return;
+      try{
+        var t = audioCtx.currentTime;
+        var g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.03, t + 7.5); /* じわじわと、7秒以上かけて立ち上がる。気配程度に薄く */
+        var lp = audioCtx.createBiquadFilter();
+        lp.type = "lowpass"; lp.frequency.value = 240; lp.Q.value = 0.6;
+        lp.connect(g); out(g, 0.35);
+        var stops = [];
+        /* 基底のうなり：わずかにズレた低音を3つ重ねる */
+        [[41, "sine", 0.5], [41.8, "sine", 0.42], [82.4, "triangle", 0.14], [55.1, "sine", 0.3]].forEach(function(spec){
+          var o = audioCtx.createOscillator(); o.type = spec[1]; o.frequency.value = spec[0];
+          var og = audioCtx.createGain(); og.gain.value = spec[2];
+          o.connect(og); og.connect(lp); o.start();
+          stops.push(o);
+        });
+        /* 部屋の空気：低域ノイズがゆっくり寄せては引く */
+        var nsrc = audioCtx.createBufferSource();
+        nsrc.buffer = noiseBuffer(4, true); nsrc.loop = true;
+        var nf = audioCtx.createBiquadFilter(); nf.type = "lowpass"; nf.frequency.value = 190;
+        var ng = audioCtx.createGain(); ng.gain.value = 0.5;
+        nsrc.connect(nf); nf.connect(ng); ng.connect(lp); nsrc.start();
+        stops.push(nsrc);
+        var lfo = audioCtx.createOscillator(); lfo.frequency.value = 0.07;
+        var lfoG = audioCtx.createGain(); lfoG.gain.value = 70;
+        lfo.connect(lfoG); lfoG.connect(nf.frequency); lfo.start();
+        stops.push(lfo);
+        /* 呼吸のような音量のうねり */
+        var lfo2 = audioCtx.createOscillator(); lfo2.frequency.value = 0.11;
+        var lfo2G = audioCtx.createGain(); lfo2G.gain.value = 0.012;
+        lfo2.connect(lfo2G); lfo2G.connect(g.gain); lfo2.start();
+        stops.push(lfo2);
+        droneNodes = { g: g, stops: stops };
+      }catch(e){}
+    }
+    function setDroneLevel(stage){
+      if(!droneNodes || !audioCtx) return;
+      try{ droneNodes.g.gain.setTargetAtTime(0.03 + stage * 0.008, audioCtx.currentTime, 0.9); }catch(e){}
+    }
+    function stopDrone(immediate){
+      if(!droneNodes || !audioCtx){ droneNodes = null; return; }
+      try{
+        var d = droneNodes; droneNodes = null;
+        var t = audioCtx.currentTime;
+        d.g.gain.cancelScheduledValues(t);
+        if(immediate){ d.g.gain.setValueAtTime(0.0001, t); }
+        else { d.g.gain.setTargetAtTime(0.0001, t, 0.4); }
+        setTimeout(function(){ d.stops.forEach(function(s){ try{ s.stop(); }catch(e){} }); }, immediate ? 120 : 1400);
+      }catch(e){}
+    }
+    /* ルームトーン：完全なデジタル無音は「バグ」に聞こえる。
+       かすかな部屋の空気だけを残し続けることで、ドローンや足音が止んだ瞬間が
+       「止まった」ではなく「静まり返った」になる。ピーク中は常駐させる */
+    function startRoomTone(){
+      if(!soundOn) return;
+      ensureAudio();
+      if(!audioCtx || roomToneNodes) return;
+      try{
+        var t = audioCtx.currentTime;
+        var g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.0075, t + 4);
+        var src = audioCtx.createBufferSource();
+        src.buffer = noiseBuffer(4, true); src.loop = true;
+        var f = audioCtx.createBiquadFilter();
+        f.type = "lowpass"; f.frequency.value = 150;
+        src.connect(f); f.connect(g); out(g, 0.12);
+        src.start();
+        roomToneNodes = { g: g, stops: [src] };
+      }catch(e){}
+    }
+    function stopRoomTone(){
+      if(!roomToneNodes || !audioCtx){ roomToneNodes = null; return; }
+      try{
+        var d = roomToneNodes; roomToneNodes = null;
+        var t = audioCtx.currentTime;
+        d.g.gain.cancelScheduledValues(t);
+        d.g.gain.setTargetAtTime(0.0001, t, 0.5);
+        setTimeout(function(){ d.stops.forEach(function(s){ try{ s.stop(); }catch(e){} }); }, 1600);
+      }catch(e){}
+    }
+    /* 心拍バイブ：接近の間ずっと、端末が小さく脈打つ。
+       段階が進むほど速くなり、終盤では拍が抜けたり、タップのタイミングと
+       合わなくなったりする。「自分の心臓ではない」と分かっていても、
+       体はそちらに引きずられる */
+    function stopHeartbeat(){
+      if(heartbeatTimer){ clearTimeout(heartbeatTimer); heartbeatTimer = null; }
+    }
+    function startHeartbeat(){
+      stopHeartbeat();
+      if(!navigator.vibrate) return;
+      if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      var beat = function(){
+        heartbeatTimer = null;
+        var pk = $("peak");
+        if(!pk || !pk.classList.contains("on")) return;
+        vibe(heartbeatStage >= 4 ? [70, 120, 45] : [50, 130, 35]);
+        var base = Math.max(620, 1750 - heartbeatStage * 185);
+        var wait = base * (0.82 + Math.random() * 0.36);
+        if(heartbeatStage >= 5 && Math.random() < 0.22){ wait *= 2.3; } /* 拍が、抜ける */
+        heartbeatTimer = setTimeout(beat, wait);
+      };
+      heartbeatTimer = setTimeout(beat, 600);
+    }
+    /* 息づかい：帯域ノイズを、吸って吐く形にゆっくり開閉する。声にはしない */
+    function breathSound(intensity, dur){
+      if(!soundOn || !audioCtx) return;
+      try{
+        var t = audioCtx.currentTime;
+        var total = dur || 2.6;
+        var src = audioCtx.createBufferSource();
+        src.buffer = noiseBuffer(total + 0.3, false);
+        var f = audioCtx.createBiquadFilter();
+        f.type = "bandpass"; f.Q.value = 0.9;
+        f.frequency.setValueAtTime(480, t);
+        f.frequency.linearRampToValueAtTime(880, t + total * 0.45);
+        f.frequency.linearRampToValueAtTime(420, t + total);
+        var g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(intensity, t + total * 0.42);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + total);
+        src.connect(f); f.connect(g); out(g, 0.55);
+        src.start(t); src.stop(t + total + 0.1);
+      }catch(e){}
+    }
+    /* 金属の響き：非整数倍の部分音を数本、長い残響で鳴らす。ドアや鍵の場面用 */
+    function metalResonance(intensity){
+      if(!soundOn || !audioCtx) return;
+      try{
+        var t = audioCtx.currentTime;
+        var base = 196 * (0.97 + Math.random() * 0.06);
+        [1, 2.76, 5.4, 8.9].forEach(function(m, i){
+          var o = audioCtx.createOscillator(); o.type = "sine";
+          o.frequency.value = base * m * (1 + (Math.random() - 0.5) * 0.004);
+          var g = audioCtx.createGain();
+          var peak = intensity * (0.16 / (i + 1));
+          g.gain.setValueAtTime(peak, t);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6 + i * 0.35);
+          o.connect(g); out(g, 0.85);
+          o.start(t); o.stop(t + 2.8);
+        });
+      }catch(e){}
+    }
+    /* 木と金属が軋む音：周波数がゆっくり滑る帯域ノイズ */
+    function creakSound(intensity){
+      if(!soundOn || !audioCtx) return;
+      try{
+        var t = audioCtx.currentTime;
+        var dur = 0.9 + Math.random() * 0.5;
+        var src = audioCtx.createBufferSource();
+        src.buffer = noiseBuffer(dur + 0.2, false);
+        var f = audioCtx.createBiquadFilter();
+        f.type = "bandpass"; f.Q.value = 9;
+        var startF = 300 + Math.random() * 260;
+        f.frequency.setValueAtTime(startF, t);
+        f.frequency.exponentialRampToValueAtTime(startF * (0.55 + Math.random() * 0.3), t + dur);
+        var g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(intensity, t + dur * 0.3);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        src.connect(f); f.connect(g); out(g, 0.6);
+        src.start(t); src.stop(t + dur + 0.1);
+      }catch(e){}
+    }
+    /* 深いサブのうねり：場面転換や結末の「圧」に使う */
+    function subSwell(intensity, dur){
+      if(!soundOn || !audioCtx) return;
+      try{
+        var t = audioCtx.currentTime;
+        var total = dur || 2.2;
+        var o = audioCtx.createOscillator(); o.type = "sine";
+        o.frequency.setValueAtTime(58, t);
+        o.frequency.exponentialRampToValueAtTime(34, t + total);
+        var g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(intensity, t + total * 0.35);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + total);
+        o.connect(g); out(g, 0.4);
+        o.start(t); o.stop(t + total + 0.1);
+      }catch(e){}
+    }
+    function vibe(pattern){
+      if(navigator.vibrate){ try{ navigator.vibrate(pattern); }catch(e){} }
+    }
+    /* 足音：床を伝う重さ（サブの落下）＋靴底の擦れ（帯域ノイズ）＋残響。
+       毎回わずかに音程と擦れの量が違うので、機械的な反復に聞こえない */
+    function thud(intensity){
+      vibe(Math.round(24 + intensity * 170));
+      if(!soundOn || !audioCtx) return;
+      try{
+        var t = audioCtx.currentTime;
+        var det = 0.94 + Math.random() * 0.12;
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = "sine";
+        o.frequency.setValueAtTime(112 * det, t);
+        o.frequency.exponentialRampToValueAtTime(34, t + 0.26);
+        g.gain.setValueAtTime(intensity, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.38);
+        o.connect(g); out(g, 0.45);
+        o.start(t); o.stop(t + 0.42);
+        var src = audioCtx.createBufferSource();
+        src.buffer = noiseBuffer(0.22, false);
+        var f = audioCtx.createBiquadFilter();
+        f.type = "bandpass"; f.frequency.value = 300 + Math.random() * 220; f.Q.value = 0.8;
+        var g2 = audioCtx.createGain();
+        g2.gain.setValueAtTime(intensity * 0.22, t);
+        g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+        src.connect(f); f.connect(g2); out(g2, 0.5);
+        src.start(t);
+        /* 足音は足音だけにする。遅れて付いてくる軋み等の装飾音は置かない */
+      }catch(e){}
+    }
+    /* ノック：叩く瞬間のアタック、木の胴鳴り、そして部屋に残る残響の3層。
+       叩く位置が毎回違うように、胴鳴りの音程を揺らす */
+    function knockOnce(intensity){
+      vibe([70, 40, 70]);
+      if(!soundOn || !audioCtx) return;
+      try{
+        var t = audioCtx.currentTime;
+        var det = 0.92 + Math.random() * 0.16;
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = "triangle";
+        o.frequency.setValueAtTime(196 * det, t);
+        o.frequency.exponentialRampToValueAtTime(68, t + 0.1);
+        g.gain.setValueAtTime(intensity * 0.9, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.19);
+        o.connect(g); out(g, 0.65);
+        o.start(t); o.stop(t + 0.22);
+        var src = audioCtx.createBufferSource();
+        src.buffer = noiseBuffer(0.07, false);
+        var f = audioCtx.createBiquadFilter();
+        f.type = "bandpass"; f.frequency.value = 820 * det; f.Q.value = 1.1;
+        var g2 = audioCtx.createGain(); g2.gain.value = intensity * 0.65;
+        src.connect(f); f.connect(g2); out(g2, 0.7);
+        src.start(t);
+        var o2 = audioCtx.createOscillator(), g3 = audioCtx.createGain();
+        o2.type = "sine"; o2.frequency.value = 96 * det;
+        g3.gain.setValueAtTime(intensity * 0.4, t);
+        g3.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+        o2.connect(g3); out(g3, 0.6);
+        o2.start(t); o2.stop(t + 0.38);
+      }catch(e){}
+    }
+    /* ---------- 対面の瞬間：一度だけ、静止画がカットで現れる ----------
+       流れは「全ての音が止む → 長い無音 → 静止画がカットで現れる → カットで消える」。
+       拡大も、移動も、揺れもしない。音も置かない。作り物の衝撃音は安く聞こえるし、
+       動く顔は面白くなってしまう。無音の中で、動かずにそこにいる方が怖い。
+       触覚だけは残す：強い版では出現の瞬間に一度だけ、短く振動させる。
+       strong：扉が開いた結末の最大版。weak：延期のとき、遠くで一瞬だけ見せる版。
+       扉が開かない場合は対面自体が起きない（呼び出し側でドア越しのノック連打に差し替える） */
+    function faceScare(kind){
+      if(faceFired) return;
+      faceFired = true;
+      var peak = $("peak");
+      /* 強い版は正面の顔、弱い版は髪越しの片目。画像そのものも使い分ける */
+      var face = kind === "weak" ? ($("peak-face-alt") || $("peak-face")) : $("peak-face");
+      var altFace = $("peak-face-alt");
+      if(!peak || !face) return;
+      var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      stopDrone(true);
+      stopHeartbeat();
+      vibe(0);
+      if(reduced){
+        /* 動きを抑える設定では、ズームも揺れもなし。静かに1.2秒だけ見せて消す */
+        face.classList.add("show");
+        var rt = setTimeout(function(){ face.classList.remove("show"); }, 1200);
+        peakTimers.push(rt);
+        return;
+      }
+      /* 間：まず全ての音が止む。強い版は2秒を超える無音を置き、
+         途中で一度だけ「何か見えた気がする」気配（別画像のチラ見せ）で
+         油断と誤認を作ってから、本命は予測できないタイミングで出す */
+      var strong = kind !== "weak";
+      var hold = strong ? 2350 + Math.random() * 500 : 1500 + Math.random() * 350;
+      if(strong && altFace){
+        var glimpseAt = 820 + Math.random() * 260;
+        var idG = setTimeout(function(){
+          if(!$("peak").classList.contains("on")) return;
+          altFace.classList.add("show");
+          altFace.classList.add("glimpse");
+          /* 気配は目だけで見せる。ここで息の音まで足すと、説明しすぎになる */
+          var idG2 = setTimeout(function(){
+            altFace.classList.remove("glimpse");
+            altFace.classList.remove("show");
+          }, 130);
+          peakTimers.push(idG2);
+        }, glimpseAt);
+        peakTimers.push(idG);
+      }
+      var id1 = setTimeout(function(){
+        if(!$("peak").classList.contains("on")) return;
+        /* 音は置かない。無音のまま、静止画がカットで現れる */
+        face.classList.add("show");
+        peak.classList.add("watching"); /* 顔が出ている間は、世界がわずかに歪む */
+        if(strong) vibe([120, 50, 220]);
+      }, hold);
+      peakTimers.push(id1);
+      var id2 = setTimeout(function(){
+        if(strong){
+          /* カットで消す。ただし消しきらない：薄く、静止したまま残り続ける。
+             動かない残像の方が、じっと見ている人には効く */
+          face.classList.remove("show");
+          face.classList.add("linger");
+          var idL = setTimeout(function(){
+            face.classList.remove("linger");
+            peak.classList.remove("watching");
+          }, 15500);
+          peakTimers.push(idL);
+        } else {
+          face.classList.remove("show");
+          peak.classList.remove("watching");
+        }
+      }, hold + (strong ? 1700 : 1500));
+      peakTimers.push(id2);
+    }
+    function playSteps(count, interval, intensity){
+      /* 足音も機械的に等間隔にはしない。歩幅が揃っていない方が、生き物に聞こえる */
+      var acc = 0;
+      for(var i = 0; i < count; i++){
+        (function(k, at){
+          var id = setTimeout(function(){ thud(intensity + k * 0.012); }, at);
+          peakTimers.push(id);
+        })(i, acc);
+        acc += interval * (0.78 + Math.random() * 0.5);
+      }
+    }
+    function playKnocks(count, interval, intensity){
+      var acc = 0;
+      for(var i = 0; i < count; i++){
+        (function(k, at){
+          var id = setTimeout(function(){ knockOnce(intensity); }, at);
+          peakTimers.push(id);
+        })(i, acc);
+        acc += interval * (0.8 + Math.random() * 0.45);
+      }
+    }
+    /* 偽の脅し（Lewton Bus）：一度だけ、大きな「日常の音」で肩透かしを入れる。
+       遠くを電車が通り過ぎる音。本番の前に一度だけ置き、説明はしない */
+    function trainPassSound(){
+      if(!soundOn || !audioCtx) return;
+      try{
+        var t = audioCtx.currentTime;
+        var src = audioCtx.createBufferSource();
+        src.buffer = noiseBuffer(5.4, true); src.loop = true;
+        var f = audioCtx.createBiquadFilter();
+        f.type = "lowpass"; f.frequency.value = 300;
+        var g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.30, t + 1.1);
+        g.gain.setValueAtTime(0.30, t + 2.3);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 4.7);
+        src.connect(f); f.connect(g); out(g, 0.22);
+        src.start(t); src.stop(t + 5.0);
+        /* レールの継ぎ目の音：ガタン、ゴトン。日常の音だと分かる程度にだけ */
+        [1.35, 1.68, 2.95, 3.28].forEach(function(off){
+          var s2 = audioCtx.createBufferSource();
+          s2.buffer = noiseBuffer(0.09, false);
+          var f2 = audioCtx.createBiquadFilter();
+          f2.type = "bandpass"; f2.frequency.value = 620; f2.Q.value = 1.4;
+          var g2 = audioCtx.createGain(); g2.gain.value = 0.10;
+          s2.connect(f2); f2.connect(g2); out(g2, 0.3);
+          s2.start(t + off);
+        });
+      }catch(e){}
+    }
+    /* 途中で止まる足音用：4歩目が、着地しきらずに切れる */
+    function thudCut(){
+      vibe(28);
+      if(!soundOn || !audioCtx) return;
+      try{
+        var t = audioCtx.currentTime;
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = "sine";
+        o.frequency.setValueAtTime(106, t);
+        o.frequency.exponentialRampToValueAtTime(54, t + 0.07);
+        g.gain.setValueAtTime(0.115, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.085);
+        o.connect(g); out(g, 0.4);
+        o.start(t); o.stop(t + 0.1);
+      }catch(e){}
+    }
+    /* 足音の途中停止：3歩だけ等間隔に鳴らし、4歩目で途中で止める。
+       規則性が崩れる瞬間に、予測が外れる */
+    function playStepsHalt(){
+      [0, 660, 1320].forEach(function(at, i){
+        var id = setTimeout(function(){ thud(0.105 + i * 0.012); }, at);
+        peakTimers.push(id);
+      });
+      var id4 = setTimeout(function(){ thudCut(); }, 1980);
+      peakTimers.push(id4);
+      /* 5歩目は、来ない */
+    }
+
+    /* 対面の二度目：対面が成立した結末で、「診断結果を見る」を押した直後に来る。
+       一度目と違い、音の合図はない。本文を先に消し、無音の中で、
+       静止画がカットで現れて、一度目より長く、動かずにそこにいる。
+       「終わった」と思った直後が、いちばん無防備 */
+    function faceScareSecond(doneFn){
+      var peak = $("peak"), face = $("peak-face"), content = $("peak-content");
+      if(!peak || !face){ doneFn(); return; }
+      stopHeartbeat();
+      stopDrone(true);
+      vibe(0);
+      if(content) content.classList.add("gone");
+      face.classList.remove("linger");
+      face.classList.remove("show");
+      var t1 = setTimeout(function(){
+        if(!$("peak").classList.contains("on")){ doneFn(); return; }
+        /* 音は置かない。静止画がカットで現れて、カットで消える */
+        face.classList.add("show");
+      }, 1500);
+      peakTimers.push(t1);
+      var t2 = setTimeout(function(){
+        face.classList.remove("show");
+        if(content) content.classList.remove("gone");
+        doneFn();
+      }, 1500 + 3400);
+      peakTimers.push(t2);
+    }
+
+    /* ---------- トースト ---------- */
+    var toastTimer = null;
+    function toast(msg, ms){
+      var el = $("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      if(toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(function(){ el.classList.remove("show"); }, ms || 3400);
+    }
+
+    function startQuiz(){
+      var nameVal = "";
+      var nameEl = $("name-input");
+      if(nameEl){ nameVal = nameEl.value.replace(/^\s+|\s+$/g, ""); }
+      state = freshState();
+      if(nameVal){ state.userName = nameVal; state.flags.name = true; }
+      snapshots = [];
+      tailShown = false; tailMaxScroll = 0; tailStage = 0; tailRun++;
+      var tl = $("tail-line");
+      if(tl){
+        tl.classList.remove("show"); tl.classList.remove("glitching");
+        tl.setAttribute("aria-hidden", "true");
+        tl.innerHTML = "—— 最後まで、読みましたね。<br />読んだことも、渡したもののうちです。";
+      }
+      var tl2 = $("tail-line-2");
+      if(tl2){ tl2.classList.remove("show"); tl2.setAttribute("aria-hidden", "true"); }
+      var te = $("tail-eye");
+      if(te) te.classList.remove("show");
+      document.body.classList.remove("tail-deep");
+      awayCount = 0; awayLongest = 0; peakPlayed = false; peakTimers = []; peakLie = null;
+      titleEroded = false;
+      secondFaceDone = false;
+      document.body.classList.remove("aftermath");
+      soundOn = true; $("btn-sound").textContent = "音：オン";
+      document.title = "せいかくしんだん";
+      $("screen-intro").classList.add("hidden");
+      $("screen-result").classList.add("hidden");
+      $("screen-interim").classList.add("hidden");
+      var tallyEl = $("screen-tally");
+      if(tallyEl) tallyEl.classList.add("hidden");
+      document.body.classList.remove("tally-dim");
+      $("screen-quiz").classList.remove("hidden");
+      $("screen-quiz").classList.add("fade-in");
+      window.scrollTo(0, 0);
+      renderQuestion();
+    }
+
+    function renderQuestion(){
+      var n = state.idx + 1;
+      var q = QUESTIONS[state.idx];
+      $("q-now").textContent = n;
+      $("q-total").textContent = "32";
+      $("progress-bar").style.width = ((n - 1) / 32 * 100) + "%";
+      $("q-text").textContent = q.q;
+      $("q-sub").textContent = q.sub || "";
+      var a = $("opt-a"), b = $("opt-b");
+      a.textContent = q.a; b.textContent = q.b;
+      a.disabled = false; b.disabled = false;
+      a.classList.remove("picked"); b.classList.remove("picked");
+      var fb = $("feedback");
+      fb.textContent = ""; fb.classList.remove("show");
+      $("btn-back").style.visibility = state.idx === 0 ? "hidden" : "visible";
+      qStartAt = Date.now();
+    }
+
+    function answer(choice){
+      ensureAudio();
+      var q = QUESTIONS[state.idx];
+      var n = state.idx + 1;
+      /* 音量設計：診断パートの音は意図的に小さく置く。耳が小さな音に慣れ、
+         端末の音量を上げた状態でクライマックスを迎えるための落差 */
+      blip(740, 0.05, 0.014);
+      snapshots.push(JSON.stringify(state));
+      var elapsed = (Date.now() - qStartAt) / 1000;
+      state.times.push(elapsed);
+      var pole = choice === 0 ? q.pa : q.pb;
+      if(pole){ state.counts[pole]++; }
+      var flag = choice === 0 ? q.flagA : q.flagB;
+      if(flag){ state.flags[flag] = true; }
+      state.answers.push(choice);
+      /* フィードバック決定 */
+      var fbText = (choice === 0 ? q.fbA : q.fbB) || FEEDBACK[state.idx];
+      if(state.idx === 28 && state.times.length > 5){
+        var past = state.times.slice(0, -1);
+        var avg = past.reduce(function(s, v){ return s + v; }, 0) / past.length;
+        if(elapsed > avg * 1.7){ fbText = "今のは、" + elapsed.toFixed(0) + "秒。平均より、ずっと迷いましたね"; }
+      }
+      state.feedbacks.push(fbText);
+      var a = $("opt-a"), b = $("opt-b");
+      a.disabled = true; b.disabled = true;
+      (choice === 0 ? a : b).classList.add("picked");
+      $("progress-bar").style.width = (n / 32 * 100) + "%";
+      var fb = $("feedback");
+      fb.textContent = fbText;
+      fb.classList.add("show");
+      /* 診断パート内の小さな異常：中盤を過ぎた2箇所だけ、フィードバックの
+         1文字が一瞬だけ別の文字に化けて、すぐ戻る。書体も書式も通常のまま、
+         内容だけが静かに違う。気づくかどうかは、読む人次第 */
+      if((n === 26 || n === 31) && !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)){
+        var fbElG = fb, origG = fbText;
+        var posG = origG.indexOf("ま");
+        if(posG >= 0){
+          var glitchedG = origG.slice(0, posG) + "も" + origG.slice(posG + 1);
+          setTimeout(function(){
+            if(fbElG.textContent !== origG) return;
+            fbElG.textContent = glitchedG;
+            setTimeout(function(){ if(fbElG.textContent === glitchedG) fbElG.textContent = origG; }, 540);
+          }, 660);
+        }
+      }
+      var delay = 820;
+      if(n === QUESTIONS.length){ delay = 420; } /* 最終回答からは、間を置かない */
+      state.idx++;
+      setTimeout(function(){
+        if(state.idx >= QUESTIONS.length){ playTally(function(){ showResult(); }); }
+        else if(state.idx === 22 && !state.interimShown){ showInterim(); }
+        else{ renderQuestion(); }
+      }, delay);
+    }
+
+    /* ---------- ピーク：最終回答の直後に来る、一瞬の反転 ---------- */
+    /* 汎用の台詞ではなく、このプレイヤーの実測データだけで組み立てる */
+    function peakLineData(){
+      var ans = function(i){ var q = QUESTIONS[i]; return state.answers[i] === 0 ? q.a : q.b; };
+      var lines = [];
+      var maxI = 0;
+      state.times.forEach(function(t, i){ if(t > state.times[maxI]) maxI = i; });
+      var maxT = state.times[maxI];
+      var now = new Date();
+      var hh = ("0" + now.getHours()).slice(-2), mm = ("0" + now.getMinutes()).slice(-2);
+      /* バラバラのデータではなく、「迎えに行ける条件」が1つずつ揃うチェックとして並べる */
+      lines.push({ cls:"check-head", html:"迎えに行くための条件を、確認します" });
+      lines.push({ cls:"check", html: state.flags.key
+        ? "<b>☑ 入れます</b> — 鍵は「" + esc(ans(7)) + "」。置き場所が判明しているので、探さなくていい"
+        : "<b>☐ 入り口は未確定</b> — 鍵の置き場所は「" + esc(ans(7)) + "」。ここだけ、まだ揃っていません" });
+      lines.push({ cls:"check", html: state.flags.lie
+        ? "<b>☑ 誤魔化せません</b> — 嘘は「つくべきではない」。あなたは嘘がつけないので、隠れても分かります"
+        : "<b>☐ 誤魔化せるかもしれません</b> — 嘘は「時と場合による」。ここは、まだ揃っていません" });
+      lines.push({ cls:"check", html: state.flags.dark
+        ? "<b>☑ 暗がりで足が止まります</b> — 暗い場所は「少し落ち着かない」。暗くすれば、逃げにくくなります"
+        : "<b>☐ 暗がりは平気です</b> — 暗い場所でも「むしろ落ち着く」。ここは、揃っていません" });
+      lines.push({ cls:"check", html: state.flags.alone
+        ? "<b>☑ 一人です</b> — 今、「一人でいる」。時刻は <b>" + hh + ":" + mm + "</b>。迎えに行く相手は、あなただけです"
+        : "<b>☐ 一人ではありません</b> — 近くに人がいる。今は、まだ揃っていません" });
+      lines.push({ cls:"check", html: !state.flags.locked
+        ? "<b>☑ ドアが開きます</b> — 施錠は「閉めていない／確認していない」。鍵がなくても、開きます"
+        : (state.flags.key
+          ? "<b>☑ ドアは開けられます</b> — 施錠は「もう閉めてある」。でも、鍵の場所は判明しています"
+          : "<b>☐ ドアは開きません</b> — 施錠済みで、鍵の場所も不明。ここだけが、最後の壁です") });
+      if(maxT >= 2.5){
+        lines.push({ cls:"check", html:"<b>☑ 迷いが見えます</b> — Q" + (maxI + 1) + "で <b>" + maxT.toFixed(1) + "秒</b>迷いました。迷う場所まで、見ていました" });
+      }
+      if(awayCount > 0){
+        lines.push({ cls:"check", html:"<b>☑ 離れたことも分かります</b> — 途中で <b>" + awayCount + "回</b>、最長 <b>" + Math.max(1, Math.round(awayLongest)) + "秒</b>、画面を離れました" });
+      }
+      if(state.answers[22] === 0){
+        lines.push({ cls:"check", html:"<b>☑ 信じています</b> — 暫定結果に「当たっている」と答えました。だから、声をかけても信じます" });
+      }
+      lines.push({ cls:"check", html: state.flags.name
+        ? "<b>☑ 呼べます</b> — 名前は「" + esc(state.userName) + "」。最初に、自分で教えてくれました"
+        : "<b>☐ 呼べません</b> — 名前だけは、最初から言いませんでした" });
+      if(state.flags.seer){
+        lines.push({ cls:"check-head", html:"—— 違和感には、気づいていたのに" });
+      }
+      return lines;
+    }
+
+    /* ---------- 集計：ホラーパートの入り ----------
+       「これからホラーパートが始まります」という開始宣言はしない。
+       最終回答のあとも診断の画面・書体・色のまま、「結果を集計しています」
+       という通常フローを続ける。最初は本当に普通の集計項目だけが並び、
+       「集計が完了しました」のあとも項目が増え続けること、
+       性格診断ではあり得ない項目が同じ書式で混ざっていること——
+       否定できる程度の小さな異常だけを積む。
+       暗転と明朝の staging は、異常が積み上がったあとに初めて使う */
+    function playTally(done){
+      var sec = $("screen-tally"), list = $("tally-list"), bar = $("tally-bar"), status = $("tally-status");
+      if(!sec || !list){ playPeak(done); return; }
+      var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      $("screen-quiz").classList.add("hidden");
+      $("screen-interim").classList.add("hidden");
+      sec.classList.remove("hidden");
+      sec.classList.add("fade-in");
+      window.scrollTo(0, 0);
+      list.innerHTML = "";
+      status.textContent = "";
+      bar.style.width = "0%";
+      var f = state.flags;
+      /* 前半は、結果画面にも実際に出る項目ばかりの「本物の集計」。
+         後半は、完了したはずの集計に同じ書式で混ざる異常 */
+      var normalItems = [
+        "回答を集計しています",
+        "4つの軸を計算しています",
+        "16タイプと照合しています",
+        "回答にかかった時間を集計しています",
+        "いちばん迷った質問を集計しています"
+      ];
+      var wrongItems = [
+        "受けている環境を、確認しました",
+        "鍵の置き場所を、確認しました",
+        f.alone ? "今、一人でいることを、確認しました" : "近くに人がいることを、確認しました"
+      ];
+      var stepMs = reduced ? 160 : 820;
+      var timers = [];
+      function later(fn, ms){ var id = setTimeout(fn, ms); timers.push(id); peakTimers.push(id); }
+      function addItem(text, sound){
+        var li = document.createElement("li");
+        var t = document.createElement("span"); t.className = "t-text"; t.textContent = text;
+        var s = document.createElement("span"); s.className = "t-state"; s.textContent = "…";
+        li.appendChild(t); li.appendChild(s);
+        list.appendChild(li);
+        if(sound) blip(660, 0.04, 0.010);
+        return { li: li, state: s };
+      }
+      function completeItem(it){
+        it.li.classList.add("done");
+        it.state.textContent = "✓";
+      }
+      var cursor = 350;
+      normalItems.forEach(function(text, i){
+        var at = cursor;
+        later(function(){
+          var it = addItem(text, true);
+          later(function(){
+            completeItem(it);
+            bar.style.width = Math.round((i + 1) / normalItems.length * 100) + "%";
+          }, reduced ? 120 : 430);
+        }, at);
+        cursor += stepMs;
+      });
+      /* 「集計が完了しました」——なのに、結果は表示されない。
+         そのまま少し待たせてから、項目だけが増え始める */
+      later(function(){
+        status.textContent = "集計が完了しました。結果を表示します。";
+        blip(740, 0.05, 0.012);
+      }, cursor + 200);
+      cursor += reduced ? 500 : 2100; /* 完了したのに何も起きない間 */
+      wrongItems.forEach(function(text){
+        var at = cursor;
+        later(function(){
+          /* 異常な項目には、もうクリック音を付けない。静かなのが合図 */
+          var it = addItem(text, false);
+          later(function(){ completeItem(it); }, reduced ? 120 : 520);
+        }, at);
+        cursor += reduced ? 200 : 980;
+      });
+      /* 最後の項目は、永遠に完了しない */
+      later(function(){
+        addItem("迎えに行けるかどうかを、判定しています", false);
+      }, cursor + 300);
+      cursor += reduced ? 600 : 2500; /* 判定中、のまま置く */
+      /* ここで初めて暗転する。集計画面ごと、ゆっくり闇に沈む */
+      later(function(){
+        document.body.classList.add("tally-dim");
+      }, cursor);
+      later(function(){
+        sec.classList.add("hidden");
+        sec.classList.remove("fade-in");
+        document.body.classList.remove("tally-dim");
+        playPeak(done);
+      }, cursor + (reduced ? 350 : 2500));
+    }
+
+    /* 接近パートの操作ボタンは、常に1種類だけを見せる。
+       advance（すすむ）／choices（最後の二択）／proceed（結果を見る）は同時に出さない。
+       段階の切り替えでは必ずこれを通し、前段のボタンを確実に消す */
+    function peakActionUI(mode){
+      var adv = $("peak-advance"), box = $("peak-choices"), proc = $("peak-proceed"), comp = $("peak-complicity"), hold = $("peak-hold");
+      if(adv) adv.classList.toggle("hidden", mode !== "advance");
+      if(comp) comp.classList.toggle("hidden", mode !== "advance");
+      if(box) box.classList.toggle("hidden", mode !== "choices");
+      if(proc) proc.classList.toggle("hidden", mode !== "proceed");
+      if(hold) hold.classList.toggle("hidden", mode !== "hold");
+    }
+
+    function playPeak(done){
+      if(peakPlayed){ done(); return; }
+      peakPlayed = true;
+      document.title = "せいかくしんだん";
+      var peak = $("peak"), linesEl = $("peak-lines"), bigEl = $("peak-big"), themeEl = $("peak-theme");
+      var imgEye = $("peak-img-eye"), imgDoor = $("peak-img-door"), imgRoom = $("peak-img-room"), imgStreet = $("peak-img-street");
+      var distEl = $("peak-distance"), advBtn = $("peak-advance"), compEl = $("peak-complicity");
+      linesEl.innerHTML = ""; bigEl.innerHTML = ""; if(themeEl){ themeEl.innerHTML = ""; themeEl.classList.remove("show"); }
+      bigEl.classList.remove("show");
+      $("peak-scenes").innerHTML = "";
+      $("peak-choices").classList.add("hidden");
+      $("peak-note").textContent = "";
+      var oc = $("peak-outcome"), ocs = $("peak-outcome-sub");
+      oc.innerHTML = ""; oc.classList.remove("show");
+      ocs.innerHTML = ""; ocs.classList.remove("show");
+      $("peak-proceed").classList.add("hidden");
+      $("peak-proceed").onclick = function(){
+        /* 対面が成立した結末では、結果画面に入る直前にもう一度だけ来る。
+           「終わった」と思ってボタンを押した、その手の先で */
+        var fP = state.flags;
+        var metP = (peakLie === "deceived-in") || (peakLie !== "deceived" && fP.alone && doorOpen());
+        var RMP = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if(metP && !secondFaceDone && !RMP){ secondFaceDone = true; faceScareSecond(finish); }
+        else finish();
+      };
+      if(distEl) distEl.classList.add("hidden");
+      if(advBtn) advBtn.classList.add("hidden");
+      if(compEl) compEl.classList.add("hidden");
+      var pc = $("peak-content"); if(pc) pc.style.justifyContent = "";
+      [imgEye, imgDoor, imgRoom, imgStreet, $("peak-img-corridor-b"), $("peak-img-peephole"), $("peak-img-outside")].forEach(function(im){ if(im){ im.classList.remove("show"); im.classList.remove("near"); im.classList.remove("door-push"); } });
+      peak.classList.remove("watching"); corridorNow = "";
+      peak.classList.remove("blink"); peak.classList.remove("bye");
+      faceFired = false;
+      var faceEl0 = $("peak-face");
+      if(faceEl0){ faceEl0.classList.remove("show"); faceEl0.classList.remove("jump"); faceEl0.classList.remove("jump-weak"); faceEl0.classList.remove("jump2"); faceEl0.classList.remove("linger"); }
+      var faceAlt0 = $("peak-face-alt");
+      if(faceAlt0){ faceAlt0.classList.remove("show"); faceAlt0.classList.remove("jump"); faceAlt0.classList.remove("jump-weak"); faceAlt0.classList.remove("glimpse"); faceAlt0.classList.remove("linger"); }
+      peak.classList.remove("shaking");
+      var veil0 = $("peak-veil"); if(veil0) veil0.classList.remove("on");
+      peak.style.filter = "";
+      /* 暗転の入り方を整える：ピークが始まった瞬間に、後ろの設問カードと暫定結果を
+         完全に消し、ページ地も黒に落とす。暗さの中で前の画面が薄く残って
+         「読み込み不良」に見える状態を作らない。残るのは、意図した暗転だけ */
+      $("screen-quiz").classList.add("hidden");
+      $("screen-interim").classList.add("hidden");
+      document.body.style.background = "#000";
+      /* パッと切り替えず、集計画面の暗転から続くようにゆっくり立ち上がらせる */
+      peak.style.transition = "opacity 2.8s ease";
+      peak.style.opacity = "0";
+      peak.classList.add("on");
+      peak.setAttribute("aria-hidden", "false");
+      void peak.offsetWidth;
+      peakTimers.push(setTimeout(function(){ peak.style.opacity = "1"; }, 40));
+      window.scrollTo(0, 0);
+      var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var finished = false;
+      function finish(){
+        if(finished) return; finished = true;
+        peakTimers.forEach(function(id){ clearTimeout(id); }); peakTimers = [];
+        if(approachIdleTimer){ clearTimeout(approachIdleTimer); approachIdleTimer = null; }
+        stopDrone(false);
+        stopRoomTone();
+        stopHeartbeat();
+        peakActionUI("none");
+        document.body.style.background = "";
+        peak.style.transition = "opacity 1.6s ease";
+        peak.style.opacity = "0";
+        done();
+        peak.classList.add("bye");
+        setTimeout(function(){
+          peak.classList.remove("on");
+          peak.classList.remove("bye");
+          peak.style.opacity = "";
+          peak.style.transition = "";
+          peak.setAttribute("aria-hidden", "true");
+        }, 1750);
+      }
+      /* ===== 接近エンジン =====
+         自動再生はしない。「すすむ」を押すたびに、あちらが一歩近づく。
+         段階が進むほど、足音の間隔は短く（加速）、音は重く、距離表示は縮む。 */
+      var stages = buildApproachStages();
+      var stageIdx = 0, stageRunning = false, idleUsed = false;
+      var darkMs = reduced ? 250 : 1300; /* 集計画面が沈んだあと、何も起きない暗さと静けさを少しだけ置く */
+
+      function setDistance(label, pct){
+        var l = $("peak-dist-label"), b = $("peak-dist-bar");
+        if(l) l.textContent = label;
+        if(b) b.style.width = pct + "%";
+      }
+      function armIdle(){
+        if(approachIdleTimer) clearTimeout(approachIdleTimer);
+        if(reduced) return;
+        approachIdleTimer = setTimeout(function(){
+          if(stageRunning || stageIdx >= stages.length || finished) return;
+          if(idleUsed){ armIdle(); return; }
+          idleUsed = true;
+          /* 押すのをやめた場合の分岐：足音は止まる。でも距離は戻らず、1歩だけ進む */
+          stopDrone(false);
+          appendSceneLine("足音が、止まりました", "fail");
+          var id = setTimeout(function(){
+            if(finished) return;
+            startDrone(); setDroneLevel(stageIdx + 1);
+            appendSceneLine("それでも、1歩だけ", "fail");
+            runStage(true);
+          }, 5400); /* 止まったと思ってからも、待ちすぎなくらい待たせてから進む */
+          peakTimers.push(id);
+        }, 11000);
+      }
+      function showAdvance(){
+        if(finished) return;
+        if(stageIdx >= stages.length){ startChoice(); return; }
+        /* ボタン剥奪：「部屋のすぐ外」の段階だけ、ボタンを出さない。
+           保持した間のあと、押していないのに勝手に進む。
+           「押さなければ進まない」という共犯の約束を、最後に一度だけ破る */
+        if(stages[stageIdx].auto){
+          peakActionUI("none");
+          var waitAuto = reduced ? 900 : (stages[stageIdx].autoWait ? stages[stageIdx].autoWait + Math.random() * 1400 : 3600 + Math.random() * 1600);
+          var aid = setTimeout(function(){
+            if(finished || stageRunning) return;
+            appendSceneLine("押していないのに、進みました", "fail");
+            runStage(false);
+          }, waitAuto);
+          peakTimers.push(aid);
+          return;
+        }
+        advBtn.textContent = stages[stageIdx].buttonLabel;
+        advBtn.style.animationDuration = Math.max(0.9, 2.6 - stageIdx * 0.3) + "s";
+        peakActionUI("advance");
+        var c = $("peak-content"); if(c) c.scrollTop = c.scrollHeight;
+        armIdle();
+      }
+      function startChoice(){
+        peakActionUI("none");
+        stopHeartbeat(); /* 凪では、心拍も止める。静けさは全部で作る */
+        if(distEl) distEl.classList.remove("hidden");
+        /* 距離表示は、ここでも更新しない（凍結したまま。B12） */
+        /* 凪：クライマックスの直前に、ドローンを落として何も起きない数秒を置く */
+        stopDrone(false);
+        /* ===== 対面の瞬間：接近の最後、ここで一度だけ最大の脅しが発動する =====
+           扉が開く結末では「部屋のすぐ外」から対面まで進む（最大版）。
+           一人ではない（延期）では、遠くで一瞬だけ気配を見せる弱い版。
+           扉が開かない場合は対面できないので、ここでは発動せず、
+           結末側のドア越しノック連打に譲る（既存の分岐ルールと矛盾させない）。
+           ただし「一人ではなく、嘘もつける」場合は例外：最後の質問で
+           「いない」と嘘をつけば招き入れてしまう（deceived-in）ため、
+           ここで弱い版を出して faceFired を立ててはいけない。
+           発動は保留し、嘘が確定した結末側で最強版を出す。
+           正直に答えて延期になった場合は、結末側で弱い版を出す */
+        var fNow = state.flags;
+        var steps = [];
+        if(!fNow.alone && !fNow.lie){
+          steps.push({ delay: 1400, fn: function(){
+            appendSceneLine("遠くで、止まりました", "scene-head");
+          } });
+          steps.push({ delay: 2000, fn: function(){} }); /* 結末側の発動に譲るための間 */
+        } else if(!fNow.alone){
+          steps.push({ delay: 1300, fn: function(){
+            appendSceneLine("遠くで、一瞬だけ", "scene-head");
+            faceScare("weak");
+          } });
+          steps.push({ delay: 3800, fn: function(){} }); /* 弱い版が引き切るまでの間 */
+        } else if(doorOpen()){
+          steps.push({ delay: 1700, fn: function(){
+            appendSceneLine("部屋の、すぐ外です", "scene-head");
+            faceScare("strong");
+          } });
+          steps.push({ delay: 5600, fn: function(){} }); /* 長い無音＋気配の誤認＋静止画の対面が終わるまでの間 */
+        } else {
+          steps.push({ delay: 1800, fn: function(){
+            appendSceneLine("扉の向こうで、止まりました", "scene-head");
+            /* ここも無音のまま。音を足すと、扉の向こうが「演出」に聞こえる */
+          } });
+          steps.push({ delay: 1100, fn: function(){} });
+        }
+        steps.push({ trans: "creep" });
+        steps.push({ delay: 1200, fn: function(){ appendSceneLine("最後に、聞きます", "scene-head"); } });
+        steps.push({ choice: true, delay: 1300 });
+        /* 凪：分岐の最初に、何も起きない長い間を差し込む。力を抜いた直後の方が、効く。
+           「待ちすぎ」くらいまで伸ばす。残るのはルームトーンだけ */
+        steps.unshift({ delay: reduced ? 900 : 5400, fn: function(){} });
+        runSceneSteps(steps, 0);
+      }
+      function runStage(fromIdle){
+        if(stageRunning || stageIdx >= stages.length || finished) return;
+        stageRunning = true;
+        if(!fromIdle) idleUsed = false;
+        if(approachIdleTimer){ clearTimeout(approachIdleTimer); approachIdleTimer = null; }
+        peakActionUI("none");
+        var st = stages[stageIdx];
+        var myIdx = stageIdx;
+        heartbeatStage = myIdx + 1;
+        stageIdx++;
+        setDroneLevel(myIdx + 1);
+        if(st.trans === "bridge"){
+          /* サウンドブリッジ：次の場面の音が、今の場面に先に漏れてくる。
+             ノックが聞こえたあとで、映像が遅れて追いつく */
+          playStageSound(st, myIdx);
+          var bid2 = setTimeout(function(){ if(st.img) showPeakImg(st.img); }, reduced ? 150 : 900);
+          peakTimers.push(bid2);
+        } else if(st.soundLate){
+          /* 音が映像より遅れる：視点が切り替わったあと、足音が遅れて届く */
+          if(st.img) showPeakImg(st.img);
+          if(st.trans) doTransition(st.trans);
+          var lid = setTimeout(function(){ playStageSound(st, myIdx); }, reduced ? 300 : 1600);
+          peakTimers.push(lid);
+        } else if(st.trans){
+          if(st.img) showPeakImg(st.img);
+          var dur = doTransition(st.trans);
+          var tid = setTimeout(function(){ playStageSound(st, myIdx); }, Math.min(500, dur));
+          peakTimers.push(tid);
+        } else {
+          if(st.img) showPeakImg(st.img);
+          playStageSound(st, myIdx);
+        }
+        if(st.bus){
+          /* 偽の脅し（Lewton Bus）は、この段階で一度だけ。段階の主音とは別に、
+             何の合図もなく日常の音を大きく通す */
+          var bid = setTimeout(function(){ trainPassSound(); }, reduced ? 350 : 1150);
+          peakTimers.push(bid);
+        }
+        if(st.distEvents){
+          /* 距離表示そのものへの介入：段階の途中で、表示だけが勝手に動く。
+             跳躍（いきなり近づく）と逆行（遠ざかって安心させる）を、ここで起こす */
+          st.distEvents.forEach(function(ev){
+            var evid = setTimeout(function(){
+              if(finished) return;
+              /* 自分の段階が既に終わっていたら捨てる。遅延イベントが次の場面へ漏れて、
+                 物語の位置と表示が矛盾する（ドアの前で210m等）事故を防ぐ */
+              if(stageIdx !== myIdx + 1) return;
+              setDistance(ev.label, ev.pct);
+              if(ev.line) appendSceneLine(ev.line.html, ev.line.cls || "");
+            }, reduced ? 200 : ev.at);
+            peakTimers.push(evid);
+          });
+        }
+        /* 行の間は等間隔にしない。見出しの前と、突きつける行の前で長く溜め、
+           それ以外も毎回揺らす。段階が進むと全体の呼吸は速くなるが、予測はできない */
+        var cursor = reduced ? 200 : 640;
+        st.lines.forEach(function(ln, i){
+          if(i > 0){
+            var gap;
+            if(reduced){ gap = 260; }
+            else if(st.pace === "burst"){ gap = 190 + Math.random() * 200; } /* 畳みかける段階：考える間を与えない */
+            else if(st.pace === "crawl"){ gap = (ln.cls === "scene-head" ? 2500 : 2150) + Math.random() * 1150; } /* 這う段階：1行ごとに長い沈黙 */
+            else if(ln.cls === "scene-head"){ gap = 1700 + Math.random() * 750; }
+            else if(ln.cls === "fail" || ln.cls === "call"){ gap = 2000 + Math.random() * 800; }
+            else { gap = Math.max(430, 880 - myIdx * 55) * (0.7 + Math.random() * 0.9); }
+            cursor += gap;
+          }
+          var at = cursor;
+          var id = setTimeout(function(){ appendSceneLine(ln.html, ln.cls || ""); }, at);
+          peakTimers.push(id);
+        });
+        var total = cursor + (reduced ? 300 : 900);
+        if(st.holdAfter && !reduced){
+          /* 極端に長い静止：行が出終わっても、ボタンは出ない。
+             ドローンと心拍と部屋の気配だけが残り、「何も起きない」時間が続く。
+             長さ自体も毎回違うので、待つ側は終わりを予測できない */
+          total += st.holdAfter + Math.random() * st.holdAfter * 0.45;
+        }
+        var doneId = setTimeout(function(){
+          stageRunning = false;
+          if(distEl) distEl.classList.remove("hidden");
+          /* 距離表示の嘘：段階3（9m）以降、表示の更新だけを止める。
+             物語上は玄関の前まで来ているのに、メーターは63mのまま動かない。
+             「いつ来るか」の情報だけが、ここから先は与えられない */
+          if(myIdx <= 3 && st.distLabel) setDistance(st.distLabel, st.distPct);
+          showAdvance();
+        }, total);
+        peakTimers.push(doneId);
+      }
+      function playStageSound(st, idx){
+        /* 音は段階の主音だけ：足音か、ノックか。装飾音（軋み・金属・息）は重ねない。
+           静けさの中で単独で置かれた音の方が、ずっと重く聞こえる */
+        if(st.sound === "knock"){
+          playKnocks(idx >= 5 ? 2 : 1, Math.max(380, 640 - idx * 45), 0.15 + idx * 0.022);
+        } else if(st.sound === "steps"){
+          if(st.halt){ playStepsHalt(); }
+          else { playSteps(2, Math.max(300, 880 - idx * 115), 0.06 + idx * 0.018); }
+        } else if(st.sound === "knob"){
+          /* ドアノブに触れる音：金属の共鳴を薄く一度だけ＋ごく小さなクリック。
+             回す音は、まだ出さない */
+          var kid = setTimeout(function(){ metalResonance(0.45); knockOnce(0.05); }, 420);
+          peakTimers.push(kid);
+        }
+      }
+      advBtn.onclick = function(){
+        ensureAudio();
+        if(!droneNodes) startDrone();
+        startHeartbeat();
+        /* 合図の不在：診断中ずっと鳴っていたクリック音は、接近の最初の2段階まで。
+           3段階目からは、押しても何も鳴らない。新しい音が増えるより、
+           習った合図が消える方が、ずっと静かで、ずっと怖い */
+        if(stageIdx < 2) blip(700, 0.05, 0.012);
+        runStage(false);
+      };
+
+      /* 導入：開始宣言はしない。大見出しもテーマの宣言も、ここでは出さない。
+         集計の最後の項目（判定しています…）が闇の中で静かに完了し、
+         あとは距離と「すすむ」だけが残る。テーマの文は接近の流れの中に埋めた */
+      peakTimers.push(setTimeout(function(){
+        startDrone();
+        startRoomTone();
+        startHeartbeat(); /* まだ何も起きていないうちから、心拍だけは始まっている */
+        /* 導入で足音まで鳴らさない。ドローンの気配だけが、静かに残る */
+      }, darkMs));
+      peakTimers.push(setTimeout(function(){
+        appendSceneLine("判定が、終わりました", "");
+        if(distEl) distEl.classList.remove("hidden");
+        setDistance("距離 —— 482 m", 100);
+        showAdvance();
+      }, darkMs + (reduced ? 500 : 1500)));
+    }
+
+    /* ---------- ピーク後半：接近シーケンス ---------- */
+    /* 背骨は「距離」。遠い場所→街→家の前→玄関→ドアの向こう、と段階を踏む。
+       条件チェックと生成画像は、各段階に紐づけて配置する。
+       ルールはひとつだけ。「こちらは、あなたが渡した情報しか使えない」。 */
+    function showPeakImg(which){
+      var map = { eye: $("peak-img-eye"), door: $("peak-img-door"), room: $("peak-img-room"), street: $("peak-img-street"),
+        corridorB: $("peak-img-corridor-b"), peephole: $("peak-img-peephole"), outside: $("peak-img-outside") };
+      Object.keys(map).forEach(function(k){ if(map[k]) map[k].classList.toggle("show", k === which); });
+      /* 見ることのコスト：人影や目が写っている間だけ、ノイズと歪みが強まる */
+      var pk = $("peak");
+      if(pk) pk.classList.toggle("watching", which === "eye" || which === "room" || which === "peephole");
+      if(which) corridorNow = which;
+    }
+    var corridorNow = ""; /* いま表示している背景。視線を外した隙の差し替え判定に使う */
+    var peakGazeAway = false;
+    function appendSceneLine(html, cls){
+      var box = $("peak-scenes");
+      var p = document.createElement("p");
+      p.innerHTML = html;
+      if(cls) p.className = cls;
+      box.appendChild(p);
+      p.classList.add("show"); /* 滲んでから輪郭を持つ（CSS側の transition で出す） */
+      /* 行ごとの不揃い：本文行の一部だけ、わずかに薄く落とす。
+         全部が同じ濃さで揃うと、印刷物みたいに綺麗になってしまう */
+      if(!cls && Math.random() < 0.45){ p.style.opacity = (0.84 + Math.random() * 0.1).toFixed(2); }
+      var c = $("peak-content");
+      if(c) c.scrollTop = c.scrollHeight;
+      /* 行ごとの音は置かない。音は段階の主音（足音・ノック）と山だけに絞る */
+    }
+    function buildApproachStages(){
+      var steps = [];
+      var ans = function(i){ var q = QUESTIONS[i]; return state.answers[i] === 0 ? q.a : q.b; };
+      var f = state.flags;
+      var now = new Date();
+      var hh = ("0" + now.getHours()).slice(-2), mm = ("0" + now.getMinutes()).slice(-2);
+      var minI = 0;
+      state.times.forEach(function(t, i){ if(t < state.times[minI]) minI = i; });
+      var minT = state.times[minI];
+      var L = function(html, cls){ return { html: html, cls: cls || "" }; };
+
+      /* 段階0：まだ遠く（482m）—— 決まりだけを、短く */
+      steps.push({
+        distLabel: "距離 —— 482 m", distPct: 82,
+        img: "eye", sound: "steps", buttonLabel: "すすむ",
+        lines: [
+          L("決まりが、ひとつだけ", "scene-head"),
+          L("使えるのは、<b>あなたが渡したもの</b>だけです", "rule"),
+          f.name
+            ? L("<b>☑ 呼べます</b> — 「" + esc(state.userName) + "」", "check")
+            : L("<b>☐ 呼べません</b> — 名前は、渡されませんでした", "check"),
+          L("測っていたのは、性格ではありません", "")
+        ]
+      });
+
+      /* 段階1：廊下（210m）—— 一人かどうかだけ */
+      var lines1 = [
+        f.alone
+          ? L("<b>☑ 一人です</b> — " + hh + ":" + mm + "、あなただけ", "check")
+          : L("<b>☐ 一人ではありません</b>", "check")
+      ];
+      if(minT <= 1.1){
+        lines1.push(L("Q" + (minI + 1) + "は、" + minT.toFixed(1) + "秒で即答でした", ""));
+      }
+      steps.push({
+        distLabel: "距離 —— 210 m", distPct: 64,
+        img: "street", sound: "steps", pace: "crawl", buttonLabel: "まだ、すすむ",
+        lines: lines1
+      });
+
+      /* 視点ジャック（SIREN型）：一度だけ、画面が「あちら側」になる。
+         プレイヤーは、自分の家を外から見られている側になる。
+         スマッシュカットで切り替え、音は映像より遅れて届く */
+      steps.push({
+        distLabel: "距離 —— 210 m", distPct: 64,
+        img: "outside", sound: "steps", trans: "smash", soundLate: true, buttonLabel: "目を、戻す",
+        lines: [
+          L("いま、こちらから見ています", "scene-head"),
+          L("明かりのついた、あの窓です", "")
+        ]
+      });
+
+      /* 段階2：同じ廊下（63m）—— P.T.型ループ。
+         同じ構図のはずなのに、人影が近づいていて、スリッパが消えている。
+         説明はしない。転換は「空間リセット」：黒フレームを挟んで、同じ場所に戻る */
+      steps.push({
+        distLabel: "距離 —— 63 m", distPct: 45,
+        img: "corridorB", sound: "steps", bus: true, pace: "burst", trans: "loop", buttonLabel: "近づいているのに、すすむ",
+        holdAfter: 4600,
+        /* 距離の逆行は、この段階の中で完結させる。跳ぶ→遠ざかる→無言で63mへ戻って凍結。
+           戻りのイベントまで含めて段階内に収め、玄関・ドアの場面に大きな数字を持ち込まない */
+        distEvents: [
+          { at: 420, label: "距離 —— 41 m", pct: 30 },
+          { at: 2600, label: "距離 —— 210 m", pct: 64, line: L("遠ざかりました", "fail") },
+          { at: 5400, label: "距離 —— 63 m", pct: 45 }
+        ],
+        lines: [
+          f.dark
+            ? L("<b>☑ 暗がりで、足が止まります</b>", "check")
+            : L("<b>☐ 暗がりは、平気です</b>", "check"),
+          f.lie
+            ? L("<b>☑ 嘘は、つけません</b>", "check")
+            : L("<b>☐ 嘘は、つける人です</b>", "check")
+        ]
+      });
+
+      /* 段階3：家の前（9m）—— 鍵と施錠だけ */
+      steps.push({
+        distLabel: "距離 —— 9 m", distPct: 26,
+        img: "door", sound: "steps", halt: true, holdAfter: 15000, buttonLabel: "ここで止めれば、まだ間に合う",
+        lines: [
+          L("あなたの家の前です", "scene-head"),
+          f.key
+            ? L("<b>☑ 鍵は「" + esc(ans(7)) + "」</b>", "check")
+            : L("<b>☐ 鍵の場所は、不明</b>", "check"),
+          !f.locked
+            ? L("<b>☑ 施錠、なし</b>", "check")
+            : (f.key ? L("<b>☑ 施錠あり。でも鍵は、あります</b>", "check") : L("<b>☐ 扉は、開きません</b>", "check"))
+        ]
+      });
+
+      /* 段階4：玄関（1m）—— のぞき穴越し。サウンドブリッジ：
+         ノックの音が、映像より先に今の場面へ漏れてくる */
+      var lines4 = [];
+      if(f.name){
+        lines4.push(L("「" + esc(state.userName) + "さん」", "call"));
+        lines4.push(L("呼べました", ""));
+      } else {
+        lines4.push(L("「…………」", "call"));
+        lines4.push(L("呼べません。名前が、ない", "fail"));
+      }
+      steps.push({
+        distLabel: "距離 —— 1 m", distPct: 12,
+        img: "peephole", sound: "knock", trans: "bridge", buttonLabel: "押すなと言われても、押す",
+        lines: lines4
+      });
+
+      /* 最後の数メートル：1段階に、1行だけ。近いのに、終わらない */
+      steps.push({
+        img: "door", sound: "steps", halt: true, pace: "crawl", buttonLabel: "まだ、扉の前なのに、すすむ",
+        lines: [ L("足音が、止んだ", "scene-head") ]
+      });
+      steps.push({
+        img: "door", sound: "knob", trans: "white", pace: "crawl", buttonLabel: "ノブに手が、触れているのに、すすむ",
+        lines: [ L("ノブに、手が触れた", "scene-head") ]
+      });
+      steps.push({
+        img: "peephole", pace: "crawl", buttonLabel: "息が聞こえるのに、すすむ",
+        lines: [
+          L("扉一枚", "scene-head"),
+          L("呼吸が、ふたつ", "fail")
+        ]
+      });
+
+      /* 扉と鍵の実行 */
+      var lines5 = [];
+      if(!f.locked){
+        lines5.push(L("施錠は、されていませんでした", ""));
+        lines5.push(L("<b>扉が、開きました</b>", "fail"));
+      } else if(f.key){
+        lines5.push(L("鍵は、答えの通りでした", ""));
+        lines5.push(L("<b>扉が、開きました</b>", "fail"));
+      } else {
+        lines5.push(L("鍵が、見つかりません", "fail"));
+        lines5.push(L("<b>扉は、開きません。……今回は</b>", ""));
+      }
+      steps.push({
+        distLabel: "距離 —— ドア1枚", distPct: 6,
+        img: "door", sound: "knock", trans: doorOpen() ? "door" : "blink", auto: true, autoWait: 2400, buttonLabel: "自分の手で、開ける",
+        lines: lines5
+      });
+
+      /* 段階6：部屋の、すぐ外 */
+      var lines6 = [ L("あなたの部屋の、すぐ外です", "scene-head") ];
+      if(f.alone){
+        lines6.push(L(doorOpen() ? "足音は、もう中まで" : "扉の向こうで、待っています", "fail"));
+      } else {
+        lines6.push(L("<b>今夜は、ここまで</b>", ""));
+      }
+      if(f.seer){
+        lines6.push(L("違和感には、気づいていたのに", "fail"));
+      }
+      steps.push({
+        distLabel: "距離 —— あなたの部屋の、すぐ外", distPct: 3,
+        img: "room", sound: "steps", auto: true, buttonLabel: "最後まで、自分の手で",
+        lines: lines6
+      });
+
+      if(returningVisitor){
+        steps[0].lines.splice(2, 0, L("二度目ですね。道順は、覚えています", "fail"));
+      }
+      return steps;
+    }
+    /* 距離表示の嘘の終わり：63mで凍っていたメーターが、数字を失う */
+    function corruptMeter(){
+      var dl = $("peak-dist-label"), db = $("peak-dist-bar");
+      if(dl) dl.textContent = "距離 —— ——— m";
+      if(db) db.style.width = "0%";
+    }
+    function outcomeSteps(){
+      var steps = [];
+      var f = state.flags;
+      var big, sub;
+      if(peakLie === "deceived"){
+        big = "今夜は、帰ります";
+        sub = "嘘が、今夜は効きました。";
+      } else if(peakLie === "deceived-in"){
+        big = "もう、入りました";
+        sub = "その嘘が、開けました。";
+      } else if(!f.alone){
+        big = "今夜は、延期です";
+        sub = "一人ではない時間には、行けません。";
+      } else if(doorOpen()){
+        big = "もう、着いています";
+        sub = "全部、揃っていました。";
+      } else {
+        big = "今回は、ここまでです";
+        sub = "扉が、開きませんでした。";
+      }
+      if(!f.name){ sub += "名前も、最後まで呼べませんでした。"; }
+      /* 対面が成立したかどうかで、締めの音の出し方を変える。
+         met：扉が開いて対面した（嘘で招き入れた場合を含む）→ 既存の「無音→ノック1回」。
+         blocked：扉が開かず対面できなかった → ドア越しのノック連打に差し替える */
+      var met = (peakLie === "deceived-in") || (peakLie !== "deceived" && f.alone && doorOpen());
+      var blocked = !met && peakLie !== "deceived" && f.alone && !doorOpen();
+      steps.push({ delay: 2500, fn: function(){
+        var oc = $("peak-outcome"), ocs = $("peak-outcome-sub");
+        oc.innerHTML = big; oc.classList.add("show");
+        ocs.innerHTML = sub; ocs.classList.add("show");
+        var c = $("peak-content"); if(c) c.scrollTop = c.scrollHeight;
+        /* 結末の一文に音は重ねない。ドローンが止んだ後の静けさの中で読ませる */
+      } });
+      if(peakLie === "truth" && !f.alone && !faceFired){
+        /* 接近の段階で発動を保留したケース（嘘で招き入れる可能性があった）が、
+           正直に答えて延期になった場合。弱い版は、ここで出す */
+        steps.push({ delay: 1100, fn: function(){
+          appendSceneLine("遠くで、一瞬だけ", "scene-head");
+          faceScare("weak");
+        } });
+        steps.push({ delay: 3900, fn: function(){} }); /* 弱い版が引き切るまでの間 */
+      }
+      if(met){
+        /* ドアを押さえる区間：結末は脚本どおりだが、最後の抵抗だけは
+           プレイヤー自身の手に渡す */
+        steps.push({ hold: true, delay: 1300 });
+        steps.push({ delay: 2000, fn: function(){
+          appendSceneLine(peakLie === "deceived-in" ? "—— もう、会っています" : "—— もう、会えましたね", "call");
+          var c = $("peak-content"); if(c) c.scrollTop = c.scrollHeight;
+        } });
+      }
+      /* ===== クライマックスは、画面の中ではなく現実側へ =====
+         ドローンも足音も全部切って無音にし、間を置いてから音を置く。
+         そのあと一文だけを置き、「今の音は、こちらからです」と、
+         現実の部屋の音と区別がつかない余韻を残す。 */
+      if(blocked){
+        steps.push({ delay: 3000, fn: function(){
+          stopDrone(true);
+          stopHeartbeat();
+          vibe(0);
+          corruptMeter();
+          var v = $("peak-veil"); if(v) v.classList.add("on");
+          var g = document.querySelector(".peak-grain");
+          if(g){ g.classList.add("burst"); setTimeout(function(){ g.classList.remove("burst"); }, 700); }
+        } });
+        steps.push({ delay: 1700, fn: function(){
+          /* 対面できない代わりに、ドア越しのノック連打。
+             等間隔にも、単調な加速にもしない：速い連打のあとに長い沈黙、
+             終わったと思ったところへ、もう一度だけ強く */
+          ensureAudio();
+          var gaps = [0, 620, 190, 840, 170, 170, 1250, 240, 2100];
+          var lvls = [0.22, 0.26, 0.3, 0.24, 0.32, 0.36, 0.28, 0.4, 0.46];
+          var acc = 0;
+          gaps.forEach(function(gp, gi){
+            acc += gp;
+            var id = setTimeout(function(){ knockOnce(lvls[gi]); }, acc);
+            peakTimers.push(id);
+          });
+          /* 連打の後に軋みは足さない。最後のノックの残響だけで終わらせる */
+        } });
+        steps.push({ delay: 6400, fn: function(){
+          appendSceneLine("—— 開かない扉の向こうで、まだ待っています", "call");
+        } });
+      } else {
+        steps.push({ delay: 3100, fn: function(){
+          stopDrone(true);
+          stopHeartbeat();
+          vibe(0);
+          corruptMeter();
+          var v = $("peak-veil"); if(v) v.classList.add("on");
+          var g = document.querySelector(".peak-grain");
+          if(g){ g.classList.add("burst"); setTimeout(function(){ g.classList.remove("burst"); }, 700); }
+        } });
+        steps.push({ delay: 3800, fn: function(){
+          if(peakLie === "deceived-in"){
+            /* 嘘で招き入れた結末：ノック1回では済まない。
+               接近の段階で保留しておいた、最強版の対面をここで発動させる */
+            faceScare("strong");
+          } else {
+            /* 長い無音の中の、1回だけのノックとバイブ */
+            ensureAudio();
+            knockOnce(0.26);
+            vibe([160, 80, 160]);
+          }
+        } });
+        if(peakLie === "deceived-in"){
+          steps.push({ delay: 1500, fn: function(){} }); /* 静止画の対面が終わるまでの間を足す */
+        }
+      }
+      steps.push({ delay: peakLie === "deceived-in" ? 4200 : 2600, fn: function(){
+        appendSceneLine("—— 今の音は、こちらからです", "call");
+      } });
+      steps.push({ delay: 1500, fn: function(){
+        if(peakLie === "deceived"){
+          appendSceneLine("足音は、遠ざかりました", "");
+        } else if(peakLie === "deceived-in"){
+          appendSceneLine("もう、ドアの向こうの話ではありません", "fail");
+        } else if(!f.alone){
+          appendSceneLine("一人になる時間は、必ず来ます", "");
+        } else if(!doorOpen()){
+          appendSceneLine("確認しに、行かないでください", "");
+        } else {
+          appendSceneLine("振り返らないでください", "fail");
+        }
+        var c = $("peak-content"); if(c) c.scrollTop = c.scrollHeight;
+      } });
+      steps.push({ delay: 2700, fn: function(){
+        var v = $("peak-veil"); if(v) v.classList.remove("on");
+        /* 距離表示の嘘の締め：63mで止まっていたメーターは、壊れたあと表示ごと消える */
+        var de = $("peak-distance"); if(de) de.classList.add("hidden");
+        /* ブラウザ側の侵食：ゲーム画面の外側（タブの題名）が、静かに変わっている */
+        titleEroded = true;
+        document.title = "まだ、見ています";
+        peakActionUI("proceed");
+        var c = $("peak-content"); if(c) c.scrollTop = c.scrollHeight;
+      } });
+      return steps;
+    }
+    /* ---------- 場面転換（転換ごとにパターンを変える） ---------- */
+    /* 戻り値は転換にかかる総時間(ms)。内部の小刻みな変化も peakTimers に積む */
+    function doTransition(kind){
+      var RM = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if(RM) return 120;
+      var peak = $("peak");
+      if(kind === "blink"){
+        /* 瞬きの暗転：瞼が閉じて、開いたら視点が少し近づいている。音もここで切れる */
+        peak.classList.add("blink");
+        peakTimers.push(setTimeout(function(){
+          var cur = document.querySelector(".peak-photos img.show");
+          if(cur) cur.classList.add("near");
+        }, 400));
+        peakTimers.push(setTimeout(function(){ peak.classList.remove("blink"); }, 620));
+        return 1750;
+      }
+      if(kind === "door"){
+        /* 扉へ寄っていくズームが、そのまま部屋の中へのズームに続く。
+           ここは無音で寄る。軋みや金属音を足すと、扉が「仕掛け」に聞こえる */
+        var d = $("peak-img-door");
+        if(d) d.classList.add("door-push");
+        peakTimers.push(setTimeout(function(){
+          showPeakImg("room");
+          if(d) d.classList.remove("door-push");
+        }, 1750));
+        return 2650;
+      }
+      if(kind === "smash"){
+        /* スマッシュカット：フェードなし。真っ黒を数フレーム挟んで、即断する */
+        var pk2 = $("peak"), fl2 = $("peak-flash");
+        pk2.classList.add("smash");
+        if(fl2){ fl2.classList.add("black"); }
+        peakTimers.push(setTimeout(function(){
+          if(fl2) fl2.classList.remove("black");
+          pk2.classList.remove("smash");
+        }, 110));
+        return 420;
+      }
+      if(kind === "white"){
+        /* 真っ白を数フレーム：ノブに触れた瞬間の、まぶしさのような断絶 */
+        var fl3 = $("peak-flash");
+        if(fl3){
+          fl3.classList.add("white");
+          peakTimers.push(setTimeout(function(){ fl3.classList.remove("white"); }, 80));
+        }
+        return 650;
+      }
+      if(kind === "loop"){
+        /* P.T.型ループ：扉をくぐったら、同じ場所に戻っている。
+           黒フレームを長めに挟み、グレインを荒らして「リセットされた」感覚だけ残す */
+        var fl4 = $("peak-flash");
+        var g4 = document.querySelector(".peak-grain");
+        if(fl4) fl4.classList.add("black");
+        if(g4) g4.classList.add("burst");
+        peakTimers.push(setTimeout(function(){
+          if(fl4) fl4.classList.remove("black");
+          if(g4) g4.classList.remove("burst");
+        }, 300));
+        return 1250;
+      }
+      if(kind === "creep"){
+        /* 場面は変えず、暗さだけが残って次の場面が始まる。グレインが一時的に荒れる。
+           音は足さない。転換そのものを無音にすることで、次の音が際立つ */
+        var v = $("peak-veil"); if(v) v.classList.add("on");
+        var g = document.querySelector(".peak-grain");
+        if(g){
+          g.classList.add("burst");
+          peakTimers.push(setTimeout(function(){ g.classList.remove("burst"); }, 750));
+        }
+        return 2500;
+      }
+      return 600;
+    }
+    /* ---------- ドアを押さえる操作（クロックタワー型の抵抗） ----------
+       ノックの連打に合わせて、向こう側がドアを押してくる。
+       プレイヤーは連打で押さえ返す。圧が満ちたら「持ちこたえられなかった」、
+       時間いっぱい耐えたら「持ちこたえた」——ただし結末は分岐の脚本どおり。
+       自分の手で持ちこたえた／無理だった、という感触だけが残る */
+    function startDoorHold(doneFn){
+      var RM = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      peakActionUI("hold");
+      var btn = $("peak-hold-btn"), bar = $("peak-hold-bar"), label = $("peak-hold-label");
+      var c = $("peak-content"); if(c) c.scrollTop = c.scrollHeight;
+      var pressure = 26, over = false, ended = false;
+      var dur = RM ? 3200 : 7200;
+      var startedAt = Date.now();
+      function render(){ if(bar) bar.style.width = Math.max(0, Math.min(100, pressure)) + "%"; }
+      render();
+      btn.onclick = function(){
+        if(ended) return;
+        ensureAudio();
+        pressure -= 12;
+        vibe(18);
+        render();
+      };
+      var knockTimer = setInterval(function(){
+        if(ended) return;
+        pressure += RM ? 9 : 15 + Math.random() * 7;
+        knockOnce(0.2 + Math.min(0.2, pressure / 300));
+        var pk = $("peak");
+        if(pk){ pk.classList.add("shaking"); setTimeout(function(){ pk.classList.remove("shaking"); }, 260); }
+        render();
+        if(pressure >= 100 && !over){
+          over = true;
+          if(label) label.textContent = "持ちこたえられませんでした";
+        }
+      }, RM ? 800 : 560 + Math.random() * 160);
+      var tickTimer = setInterval(function(){
+        if(ended) return;
+        pressure += 1.1;
+        render();
+        var elapsed = Date.now() - startedAt;
+        if(pressure >= 100 && !over){ over = true; if(label) label.textContent = "持ちこたえられませんでした"; }
+        if(elapsed >= dur || (over && elapsed > 1400)){
+          ended = true;
+          clearInterval(knockTimer); clearInterval(tickTimer);
+          if(!over && label) label.textContent = "持ちこたえました";
+          peakTimers.push(setTimeout(function(){
+            peakActionUI("none");
+            doneFn();
+          }, over ? 1500 : 1100));
+        }
+      }, 120);
+    }
+    function runSceneSteps(steps, idx){
+      if(!$("peak").classList.contains("on")) return;
+      if(idx >= steps.length) return;
+      var s = steps[idx];
+      if(s.choice){ renderFinalChoice(); return; }
+      if(s.hold){
+        var ht = setTimeout(function(){
+          if(!$("peak").classList.contains("on")) return;
+          startDoorHold(function(){ runSceneSteps(steps, idx + 1); });
+        }, s.delay || 600);
+        peakTimers.push(ht);
+        return;
+      }
+      if(s.trans){
+        var dur = doTransition(s.trans);
+        var tt = setTimeout(function(){
+          if(!$("peak").classList.contains("on")) return;
+          runSceneSteps(steps, idx + 1);
+        }, dur);
+        peakTimers.push(tt);
+        return;
+      }
+      var t = setTimeout(function(){
+        if(!$("peak").classList.contains("on")) return;
+        if(s.fn) s.fn();
+        runSceneSteps(steps, idx + 1);
+      }, s.delay || 900);
+      peakTimers.push(t);
+    }
+    function renderFinalChoice(){
+      appendSceneLine("「確認します。今、あなたのそばに、<b>誰かいますか</b>？」", "call");
+      var f = state.flags;
+      var box = $("peak-choices");
+      var truthBtn = $("choice-truth"), lieBtn = $("choice-lie");
+      truthBtn.textContent = f.alone ? "いない" : "いる";
+      lieBtn.textContent = f.alone ? "いる" : "いない";
+      /* 嘘の選択肢は、Q11で「つける」と答えた人だけが押せる */
+      lieBtn.classList.toggle("locked", !!f.lie);
+      peakActionUI("choices");
+      heartbeatStage = 9; /* 最後の質問の間だけ、心拍は最速で、不規則に */
+      startHeartbeat();
+      var c = $("peak-content"); if(c) c.scrollTop = c.scrollHeight;
+      var done = false;
+      var mkLine = function(extra){
+        return function(html, cls, delay){ extra.push({ delay: delay || (1150 + Math.random() * 750), fn: function(){ appendSceneLine(html, cls); } }); };
+      };
+      truthBtn.onclick = function(){
+        if(done) return; done = true;
+        peakActionUI("none");
+        peakLie = "truth";
+        var extra = []; var line = mkLine(extra);
+        if(f.alone){
+          line("「いないんですね」", "");
+          line("そのまま、待っていてください", "fail", 2300);
+        } else {
+          line("「いるんですね」", "");
+          line("では、今夜は無理ですね", "");
+        }
+        runSceneSteps(extra.concat(outcomeSteps()), 0);
+      };
+      lieBtn.onclick = function(){
+        if(done) return;
+        if(f.lie){
+          /* 「嘘はつくべきではない」と答えた人の嘘は、物理的に押せない。
+             ここも音は出さない。押せなかった、という事実だけが残る */
+          $("peak-note").textContent = "押せませんでした。あなたは「小さな嘘も、つくべきではない」と答えた人です。";
+          return;
+        }
+        done = true;
+        peakActionUI("none");
+        $("peak-note").textContent = "";
+        var extra = []; var line = mkLine(extra);
+        if(f.alone){
+          /* 一人なのに「いる」と嘘をついた → 追い返せる */
+          peakLie = "deceived";
+          line("「……いるん、ですね」", "");
+          line("では、今夜は帰ります", "", 2300);
+          line("<b>その嘘に、助けられました</b>", "");
+        } else {
+          /* 人がいるのに「いない」と嘘をついた → 招き入れてしまう */
+          peakLie = "deceived-in";
+          line("「……いないん、ですね」", "");
+          line("では、入ります", "fail", 2300);
+        }
+        runSceneSteps(extra.concat(outcomeSteps()), 0);
+      };
+    }
+
+    function goBack(){
+      if(!snapshots.length) return;
+      var prev = JSON.parse(snapshots.pop());
+      state = prev;
+      renderQuestion();
+    }
+
+    /* ---------- 結果 ---------- */
+    /* 軸の勝者。同点のときは常に先の極（E/S/T/J）に寄せず、その軸で最後に選んだ極を採る */
+    function axisWinner(ax){
+      var ca = state.counts[ax.pair[0]], cb = state.counts[ax.pair[1]];
+      if(ca !== cb) return ca > cb ? ax.pair[0] : ax.pair[1];
+      for(var i = state.answers.length - 1; i >= 0; i--){
+        var p = state.answers[i] === 0 ? QUESTIONS[i].pa : QUESTIONS[i].pb;
+        if(p === ax.pair[0] || p === ax.pair[1]) return p;
+      }
+      return ax.pair[0];
+    }
+
+    function computeCode(){
+      var code = "";
+      AXES.forEach(function(ax){
+        code += axisWinner(ax);
+      });
+      return code;
+    }
+
+    /* ---------- 暫定結果（Q22のあと、Q23の前に見せる） ---------- */
+    function showInterim(){
+      state.interimShown = true;
+      var axesHtml = "";
+      var noteParts = [];
+      AXES.forEach(function(ax){
+        var ca = state.counts[ax.pair[0]], cb = state.counts[ax.pair[1]];
+        var total = ca + cb || 1;
+        var win = axisWinner(ax);
+        var winA = win === ax.pair[0];
+        var pct = Math.round((winA ? ca : cb) / total * 100);
+        var leftPct = Math.round(ca / total * 100);
+        axesHtml += '<div class="axis-row">' +
+          '<div class="axis-top"><span><b>' + ax.pair[0] + '</b> ' + ax.la + '</span><span>' + ax.name + '：<b>' + (winA ? ax.la : ax.lb) + ' ' + pct + '%</b></span><span>' + ax.lb + ' <b>' + ax.pair[1] + '</b></span></div>' +
+          '<div class="axis-bar"><i style="left:0;width:' + leftPct + '%"></i></div></div>';
+        noteParts.push(POLE_TEXT[win]);
+      });
+      $("interim-axes").innerHTML = axesHtml;
+      $("interim-note").textContent = noteParts.join(" ");
+      $("screen-quiz").classList.add("hidden");
+      $("screen-interim").classList.remove("hidden");
+      $("screen-interim").classList.add("fade-in");
+      /* 暫定結果の小さな異常：しばらく見ていると、見出しの「22問」が
+         「23問」に変わっている。数え間違いなのか、もう1問数えられているのかは、
+         誰も説明しない */
+      var icEl = $("interim-count");
+      if(icEl){
+        icEl.textContent = "22";
+        setTimeout(function(){
+          if(!$("screen-interim").classList.contains("hidden")) icEl.textContent = "23";
+        }, 4600);
+      }
+      window.scrollTo(0, 0);
+    }
+
+    function showResult(){
+      document.title = titleEroded ? "せいかくしんだん｜まだ、見ています" : "せいかくしんだん｜結果";
+      /* 結果画面は清潔な診断画面に戻さない。暗く静かな余韻を保つ */
+      document.body.classList.add("aftermath");
+      $("screen-quiz").classList.add("hidden");
+      $("screen-interim").classList.add("hidden");
+      var code = computeCode();
+      var type = TYPES[code];
+      $("r-forname").textContent = state.userName ? state.userName + "さんのタイプは" : "あなたのタイプは";
+      $("r-code").textContent = code;
+      $("r-name").textContent = "【" + type.name + "】タイプ";
+      $("r-catch").textContent = type.catch;
+      $("r-desc").textContent = type.desc;
+      /* 4軸 */
+      var axesHtml = "";
+      var noteParts = [];
+      AXES.forEach(function(ax, i){
+        var ca = state.counts[ax.pair[0]], cb = state.counts[ax.pair[1]];
+        var total = ca + cb || 1;
+        var winA = axisWinner(ax) === ax.pair[0];
+        var pct = Math.round((winA ? ca : cb) / total * 100);
+        var leftPct = Math.round(ca / total * 100);
+        axesHtml += '<div class="axis-row">' +
+          '<div class="axis-top"><span><b>' + ax.pair[0] + '</b> ' + ax.la + '</span><span>' + ax.name + '：<b>' + (winA ? ax.la : ax.lb) + ' ' + pct + '%</b></span><span>' + ax.lb + ' <b>' + ax.pair[1] + '</b></span></div>' +
+          '<div class="axis-bar"><i style="left:0;width:' + leftPct + '%"></i></div></div>';
+        noteParts.push(POLE_TEXT[code.charAt(i)]);
+      });
+      $("r-axes").innerHTML = axesHtml;
+      $("r-axis-note").textContent = noteParts.join(" ");
+      $("r-strong").innerHTML = type.strong.map(function(s){ return "<li>" + s + "</li>"; }).join("");
+      $("r-weak").innerHTML = type.weak.map(function(s){ return "<li>" + s + "</li>"; }).join("");
+      /* 診断データ */
+      var avg = state.times.reduce(function(s, v){ return s + v; }, 0) / state.times.length;
+      var maxI = 0;
+      state.times.forEach(function(t, i){ if(t > state.times[maxI]) maxI = i; });
+      $("r-avg").textContent = avg.toFixed(1) + " 秒";
+      $("r-hesitate").textContent = "Q" + (maxI + 1) + "（" + state.times[maxI].toFixed(1) + " 秒）";
+      var now = new Date();
+      var hh = ("0" + now.getHours()).slice(-2), mm = ("0" + now.getMinutes()).slice(-2);
+      $("r-clock").textContent = hh + ":" + mm;
+      buildAbyss(hh, mm);
+      $("screen-result").classList.remove("hidden");
+      $("screen-result").classList.add("fade-in");
+      window.scrollTo(0, 0);
+    }
+
+    function buildAbyss(hh, mm){
+      var f = state.flags;
+      var items = [
+        { c:"K", what:"鍵の置き場所", got: !!f.key, val: f.key ? "判明しています" : "不明のままです" },
+        { c:"U", what:"嘘のつきやすさ", got: !!f.lie, val: f.lie ? "つけない人です" : "場合による人です" },
+        { c:"N", what:"名前", got: !!f.name, val: f.name ? "「" + esc(state.userName) + "」を、預かりました" : "最後まで、言いませんでした" },
+        { c:"H", what:"今の環境", got: !!f.alone, val: f.alone ? "一人でいます" : "人の気配があります" },
+        { c:"D", what:"苦手なもの", got: !!f.dark, val: f.dark ? "暗い場所です" : "記録できませんでした" }
+      ];
+      $("r-breakdown").innerHTML = items.map(function(it){
+        return '<div class="code-row' + (it.got ? "" : " missing") + '"><span class="c">' + it.c + '</span><span><span class="what">' + it.what + '</span>' + it.val + '</span></div>';
+      }).join("");
+      var closing = "";
+      /* 締めの文は、ピークで実際に起きた結末と必ず一致させる */
+      if(f.seer){
+        closing = "診断は、ここで終了します。<br />あなたは途中で、違和感に気づきました。<br />適合しませんでした——<span class='last'>それが、いちばん安全な結果です。</span>";
+      } else if(peakLie === "deceived"){
+        closing = "今夜は、あなたの嘘があなたを守りました。<br />でも、嘘は一度きりです。<br /><span class='last'>次は、つけないように。</span>";
+      } else if(peakLie === "deceived-in"){
+        closing = "最後の質問で、あなたは「いない」と嘘をつきました。<br />その嘘が、<span class='last'>招き入れてしまいました</span>。";
+      } else if(!f.alone){
+        closing = "今夜は、延期になりました。<br />一人ではない時間には、迎えに行けません。<br /><span class='last'>次は、一人の時間を狙います。</span>";
+      } else if(!doorOpen()){
+        closing = "扉が、開きませんでした。<br />今回は、ここまでです。<br /><span class='last'>次は、鍵と施錠のところから、もう一度聞きます。</span>";
+      } else {
+        closing = (f.name ? esc(state.userName) + "さん。<br />" : "") + "条件が、揃いました。<br />あなたの本当のタイプは、<span class='last'>迎えに行けるタイプ</span>です。<br />診断は " + hh + ":" + mm + " に完了しました。あとは、こちらから行きますので、そのまま待っていてください。";
+      }
+      var hourLate = new Date().getHours();
+      if(hourLate >= 0 && hourLate < 5){
+        closing += "<br />—— 午前" + hourLate + "時です。もう、誰も起きていません。";
+      }
+      closing += "<br /><br />この診断は、性格を測っていません。<br />測っていたのは、<span class='last'>迎えに行けるかどうか</span>です。";
+      if(returningVisitor){
+        closing += "<br />—— 二度目ですね。前回、途中で閉じたことも、最後まで読んだことも、覚えています。";
+      }
+      $("r-closing").innerHTML = closing;
+      /* さっきの場面の回収：渡した情報は使われ、渡さなかった情報ではあちらが失敗した */
+      var sceneRecap = [
+        { n:"名前", body: f.name ? "「" + esc(state.userName) + "さん」と、呼ばれました。最初に渡した名前は、もう使えます。" : "名前を呼ぶ場面で、呼びかけは成立しませんでした。名前を渡さなかったことが、あなたを守りました。" },
+        { n:"扉", body: !f.locked ? "扉は、施錠されていませんでした。鍵を探すまでもなく、開きました。" : (f.key ? "鍵は、答えた通りの場所にありました。扉は、開きました。" : "鍵は見つからず、扉は開きませんでした。……今回は。") },
+        { n:"嘘", body: peakLie === "deceived" ? "最後の質問で、あなたは嘘をつきました。その嘘が、今夜のあなたを助けました。" : (peakLie === "deceived-in" ? "最後の質問で、あなたは「いない」と嘘をつきました。その嘘が、招き入れてしまいました。" : (peakLie === "truth" ? (f.lie ? "最後の質問で、嘘の選択肢は押せませんでした。「嘘はつけない」という答えが、そのまま効きました。" : "最後の質問で、あなたは正直に答えました。つける嘘を、つかなかったのです。") : "最後の質問には、たどり着きませんでした。")) },
+        { n:"一人かどうか", body: f.alone ? (peakLie === "deceived" ? "一人でしたが、最後についた嘘が、迎えを帰しました。" : "一人だったので、迎えは中断されませんでした。") : (peakLie === "deceived-in" ? "近くに人がいました。でも最後の嘘が、それを無いことにしてしまいました。" : "近くに人がいたので、迎えは延期になりました。「一人ではない」という答えが、そのまま効きました。") },
+        { n:"対面", body: peakLie === "deceived-in" ? "最後は、対面しました。招き入れてしまったので、もう扉は関係ありませんでした。" : (peakLie === "deceived" ? "対面は、しませんでした。あなたの嘘が、迎えを帰したからです。" : (!f.alone ? "対面は、しませんでした。遠くで、気配だけが一瞬通り過ぎました。" : (!doorOpen() ? "対面は、できませんでした。扉が開かなかったので。代わりに、ノックだけが残りました。……今回は。" : "最後は、対面しました。扉も、一人の時間も、揃っていたからです。"))) }
+      ];
+      $("r-scenes").innerHTML = sceneRecap.map(function(r){
+        return '<li><span class="rq">' + r.n + '</span>' + r.body + '</li>';
+      }).join("");
+      /* 伏線の回収 */
+      var ans = function(i){ var q = QUESTIONS[i]; return state.answers[i] === 0 ? q.a : q.b; };
+      /* 文字の腐敗：再掲する過去の回答のうち、1件だけ一語を変えておく。
+         Q25の答えは時制だけをずらす（「いる」→「いた」）。書体も言い回しも
+         他と揃えたまま、内容だけが静かに壊れている。読み返して気づく変化 */
+      var ansCorrupt25 = ans(24);
+      if(ansCorrupt25 === "一人でいる") ansCorrupt25 = "一人でいた";
+      else if(ansCorrupt25 === "近くに人がいる") ansCorrupt25 = "近くに人がいた";
+      var recall = [
+        { n:"Q8", q:"鍵や財布の置き場所は？", body:"あなたの答えは「" + ans(7) + "」。" + (f.key ? "置き場所が決まっている人は、探す側にとって、とても都合がいい。" : "置き場所が定まらない人は、少しだけ探しにくい。") },
+        { n:"Q11", q:"小さな嘘も、つくべきではないと思う？", body:"あなたの答えは「" + ans(10) + "」。" + (f.lie ? "つまり、追い詰めても嘘はつけない、ということです。" : "場合によっては嘘がつける。それも、覚えました。") },
+        { n:"Q14", q:"暗い場所にいると？", body:"あなたの答えは「" + ans(13) + "」。" + (f.dark ? "苦手なものは、最初に確かめておくものです。" : "暗さは平気なんですね。それも情報です。") },
+        { n:"開始画面", q:"結果に表示する名前（任意）", body:"始める前に、普通の診断の顔で聞きました。" + (f.name ? "あなたは「" + esc(state.userName) + "」と入れた。だから、もう呼べます。" : "名前だけは、最初から言いませんでした。それが、あなたの正解でした。") },
+        { n:"Q25", q:"今、この診断を受けている環境は？", body:"あなたの答えは「" + ansCorrupt25 + "」。性格の質問の顔をして、今の状態を聞いていました。" },
+        { n:"Q28", q:"部屋の鍵やドアの施錠は？", body:"あなたの答えは「" + ans(27) + "」。" + (f.locked ? "閉めてあるなら、安心ですね。……本当に、閉まっていますか。" : "確認していない鍵は、開いているのと、あまり変わりません。") }
+      ];
+      /* 実データの個別化：いちばん速かった回答と、いちばん偏った軸も、そのまま突きつける */
+      var minI2 = 0;
+      state.times.forEach(function(t, i){ if(t < state.times[minI2]) minI2 = i; });
+      recall.push({ n:"Q" + (minI2 + 1), q:QUESTIONS[minI2].q, body:"いちばん速く答えた質問です。" + state.times[minI2].toFixed(1) + "秒で「" + ans(minI2) + "」。迷わなかった答えほど、その人そのものです。だから、記録しました。" });
+      var skewAx = null, skewPct = -1;
+      AXES.forEach(function(ax){
+        var ca = state.counts[ax.pair[0]], cb = state.counts[ax.pair[1]];
+        var tot = (ca + cb) || 1;
+        var p = Math.round(Math.max(ca, cb) / tot * 100);
+        if(p > skewPct){ skewPct = p; skewAx = ax; }
+      });
+      if(skewAx){
+        recall.push({ n:"4つの軸", q:"いちばん偏った軸", body:"「" + skewAx.name + "」は " + skewPct + "% まで偏っていました。性格の話ではありません。その偏り方まで、記録しました。" });
+      }
+      if(f.seer){
+        recall.push({ n:"Q22", q:"この診断に違和感は？", body:"あなたは「ある。少し、おかしい」と答えました。気づけた人は、あなただけです。" });
+      }
+      $("r-recall").innerHTML = recall.map(function(r){
+        return '<li><span class="rq">' + r.n + '「' + r.q + '」</span>' + r.body + '</li>';
+      }).join("");
+      /* アクロスティック */
+      var first13 = state.feedbacks.slice(0, 13);
+      $("r-acro").innerHTML = first13.map(function(t){
+        return "<li><b>" + t.charAt(0) + "</b>" + t.slice(1) + "</li>";
+      }).join("");
+      $("r-acro-answer").textContent = "あなたのことはわかりました";
+    }
+
+    /* ---------- 共有 ---------- */
+    function shareText(){
+      var code = computeCode();
+      var type = TYPES[code];
+      var axesLine = AXES.map(function(ax, i){
+        return ax.name + "：" + (code.charAt(i) === ax.pair[0] ? ax.la : ax.lb);
+      }).join(" / ");
+      var who = state.userName ? state.userName + "さんの" : "";
+      return who + "せいかくしんだんの結果は【" + type.name + "】タイプ（" + code + "）でした。\n" + type.catch + "\n" + axesLine + "\n#せいかくしんだん";
+    }
+    function copyResult(){
+      var text = shareText();
+      var done = function(){ $("copy-note").textContent = "コピーしました。そのままSNSに貼れます"; };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, function(){ fallbackCopy(text); done(); });
+      } else { fallbackCopy(text); done(); }
+    }
+    function fallbackCopy(text){
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand("copy"); }catch(e){}
+      document.body.removeChild(ta);
+    }
+    function saveCard(){
+      var code = computeCode();
+      var type = TYPES[code];
+      var cv = $("card-canvas"), ctx = cv.getContext("2d");
+      ctx.fillStyle = "#f7f8f7"; ctx.fillRect(0, 0, 1200, 630);
+      ctx.fillStyle = "#191c20";
+      ctx.font = "500 26px sans-serif";
+      ctx.fillText("せ い か く し ん だ ん", 70, 84);
+      ctx.font = "900 120px sans-serif";
+      ctx.fillText(code, 66, 226);
+      ctx.font = "900 54px sans-serif";
+      ctx.fillText("【" + type.name + "】タイプ", 70, 310);
+      if(state.userName){
+        ctx.font = "500 26px sans-serif";
+        ctx.fillText(state.userName + " さんの結果", 72, 268);
+      }
+      ctx.fillStyle = "#5b636e";
+      ctx.font = "400 30px sans-serif";
+      ctx.fillText(type.catch, 70, 362);
+      AXES.forEach(function(ax, i){
+        var y = 424 + i * 44;
+        var win = code.charAt(i);
+        var ca = state.counts[ax.pair[0]], cb = state.counts[ax.pair[1]];
+        var pct = Math.round(ca / ((ca + cb) || 1) * 100);
+        ctx.fillStyle = "#191c20"; ctx.font = "700 24px sans-serif";
+        ctx.fillText(ax.pair[0] + " " + ax.la, 70, y + 8);
+        ctx.fillStyle = "#e4e8e6"; ctx.fillRect(240, y - 12, 560, 18);
+        ctx.fillStyle = "#0f766e"; ctx.fillRect(240, y - 12, 560 * pct / 100, 18);
+        ctx.fillStyle = "#191c20"; ctx.font = "700 24px sans-serif";
+        ctx.fillText(ax.lb + " " + ax.pair[1], 830, y + 8);
+      });
+      ctx.fillStyle = "#8a929c"; ctx.font = "400 22px sans-serif";
+      ctx.fillText("診断は、完了しました", 70, 606);
+      /* よく見ないと気づかない程度に：カードの右上に、目の気配と小さな一文を紛れ込ませる。
+         共有された先でも、見ているものは見ている */
+      ctx.save();
+      ctx.globalAlpha = 0.055;
+      ctx.fillStyle = "#191c20";
+      ctx.beginPath(); ctx.ellipse(1066, 92, 17, 10, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(1118, 92, 17, 10, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.05;
+      ctx.font = "400 15px sans-serif";
+      ctx.fillText("カードの外でも、見ています", 928, 602);
+      ctx.restore();
+      var a = document.createElement("a");
+      a.download = "seikakusindan-" + code + ".png";
+      a.href = cv.toDataURL("image/png");
+      a.click();
+    }
+
+    /* ---------- イベント ---------- */
+    $("btn-start").addEventListener("click", function(){ ensureAudio(); startQuiz(); });
+    $("opt-a").addEventListener("click", function(){ answer(0); });
+    $("opt-b").addEventListener("click", function(){ answer(1); });
+    $("btn-back").addEventListener("click", function(){ goBack(); });
+    $("btn-sound").addEventListener("click", function(){
+      soundOn = !soundOn;
+      this.textContent = soundOn ? "音：オン" : "音：オフ";
+      if(soundOn){ ensureAudio(); blip(740, 0.05, 0.014); }
+    });
+    $("btn-interim-next").addEventListener("click", function(){
+      ensureAudio();
+      $("screen-interim").classList.add("hidden");
+      $("screen-quiz").classList.remove("hidden");
+      window.scrollTo(0, 0);
+      renderQuestion();
+    });
+    $("name-input").addEventListener("keydown", function(e){
+      if(e.key === "Enter"){ e.preventDefault(); ensureAudio(); startQuiz(); }
+    });
+    $("btn-copy").addEventListener("click", copyResult);
+    $("btn-card").addEventListener("click", saveCard);
+    $("btn-restart").addEventListener("click", function(){ startQuiz(); });
+
+    /* ---------- 結果画面のギミック：最後まで読んだこと自体を、回収する ---------- */
+    window.addEventListener("scroll", function(){
+      var y = window.scrollY || 0;
+      if(y > tailMaxScroll) tailMaxScroll = y;
+    }, { passive: true });
+    (function(){
+      var line = $("tail-line"), line2 = $("tail-line-2"), eye = $("tail-eye"), sent = $("tail-sentinel");
+      if(!line) return;
+      /* 二段目：最初の一行が出てから、しばらく間を置いて発動する。
+         背景の闇が濃くなり、画面の右端に目の気配が滲んで出て、
+         最初の一行が静かに書き換わり、最後にもう一行が増える。
+         「読み終わった」ことが、終わりにならないようにする */
+      function scheduleTailStage2(){
+        var run = tailRun;
+        var RM = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var wait = RM ? 2600 : 5200 + Math.random() * 1800;
+        setTimeout(function(){
+          if(run !== tailRun) return; /* 前回の診断の残タイマーは捨てる */
+          if(tailStage !== 0) return;
+          if($("screen-result").classList.contains("hidden")) return;
+          tailStage = 1;
+          document.body.classList.add("tail-deep");
+          if(!RM){
+            if(eye) eye.classList.add("show");
+            line.classList.add("glitching");
+            if(soundOn){ ensureAudio(); knockOnce(0.07); } /* 遠くで1回だけ。結果画面で鳴る唯一の音 */
+          }
+          setTimeout(function(){
+            line.innerHTML = "—— 最後まで、読みましたね。<br />読んだことも、もう使えます。";
+            line.classList.remove("glitching");
+          }, RM ? 60 : 950);
+          setTimeout(function(){
+            if(eye) eye.classList.remove("show");
+            if(line2){ line2.classList.add("show"); line2.setAttribute("aria-hidden", "false"); }
+            tailStage = 2;
+          }, RM ? 700 : 3600);
+        }, wait);
+      }
+      /* 終わった後の残り方：結果画面を離れようとする動きへの反応。
+         下まで読んでから上へ戻したとき、または一度離れて戻ってきたとき、
+         一度だけ「まだ、ここにいます」と知らせる。ページは、閉じても残る */
+      var leaveReacted = false, leaveRun = -1;
+      function leaveReaction(){
+        if(leaveRun !== tailRun){ leaveReacted = false; leaveRun = tailRun; }
+        if(leaveReacted) return;
+        if($("screen-result").classList.contains("hidden")) return;
+        if(tailMaxScroll < 200) return;
+        leaveReacted = true;
+        var sn = document.querySelector(".still-note");
+        if(sn) sn.textContent = "戻ってきましたね。まだ、ここにいます。";
+        /* 目を離した隙に、結果画面の背景も差し替わっている */
+        var rbg = document.querySelector("#result-bg img");
+        if(rbg && rbg.getAttribute("src") !== "assets/horror-outside.webp"){ rbg.src = "assets/horror-outside.webp"; }
+        if(eye){ eye.classList.add("show"); setTimeout(function(){ eye.classList.remove("show"); }, 2600); }
+        if(soundOn){ ensureAudio(); knockOnce(0.05); }
+      }
+      window.addEventListener("scroll", function(){
+        var y = window.scrollY || 0;
+        if(tailMaxScroll - y > 280) leaveReaction();
+      }, { passive: true });
+      document.addEventListener("visibilitychange", function(){
+        if(!document.hidden) leaveReaction();
+      });
+
+      /* 一段目：最下部への到達を「確定」させる。
+         以前は sentinel の出入りで dwell タイマーを張り直していたため、
+         到達したのに発動しない回があった（少しでもスクロールが戻ると
+         タイマーが消えていた）。今は、到達した時点で発動を予約し、
+         キャンセルしない。到達の判定も、sentinel の可視だけでなく
+         スクロール位置そのものと定期チェックで多重に取る */
+      var dwell = null;
+      function nearBottom(){
+        var doc = document.documentElement;
+        var max = doc.scrollHeight - window.innerHeight;
+        if(max <= 4) return true; /* スクロールできないほど短いページ */
+        return (window.scrollY || 0) >= max - 160;
+      }
+      function tryTail(){
+        if(tailShown || dwell) return;
+        if($("screen-result").classList.contains("hidden")) return;
+        if(!nearBottom()) return;
+        dwell = setTimeout(function(){
+          dwell = null;
+          if(tailShown) return;
+          if($("screen-result").classList.contains("hidden")) return;
+          tailShown = true;
+          line.classList.add("show");
+          line.setAttribute("aria-hidden", "false");
+          scheduleTailStage2();
+        }, 1100);
+      }
+      window.addEventListener("scroll", tryTail, { passive: true });
+      window.addEventListener("resize", tryTail);
+      if(sent && "IntersectionObserver" in window){
+        var io = new IntersectionObserver(function(entries){
+          entries.forEach(function(en){ if(en.isIntersecting) tryTail(); });
+        }, {});
+        io.observe(sent);
+      }
+      /* スクロールイベントが飛ばない環境でも拾えるよう、結果表示中は定期チェックする */
+      setInterval(function(){ tryTail(); }, 1500);
+    })();
+
+    /* 再訪の記録：この端末で前に開いたことがあるかどうかだけを残す。
+       二度目の訪問では、導入に一行だけが増え、接近と結果にも痕が残る */
+    (function(){
+      try{
+        if(!window.localStorage) return;
+        var KEY = "seikakusindan-visited";
+        if(localStorage.getItem(KEY)){
+          returningVisitor = true;
+          var rl = $("return-line");
+          if(rl) rl.classList.remove("hidden");
+        }
+        localStorage.setItem(KEY, "1");
+      }catch(e){}
+    })();
+
+    /* 目を逸らした隙に、変わっている（Layers of Fear型）：
+       接近中に画面を離れて戻ると、同じ廊下のはずの背景が、
+       人影の近い方へ静かに差し替わっている。説明はしない */
+    document.addEventListener("visibilitychange", function(){
+      var pk = $("peak");
+      if(!pk || !pk.classList.contains("on")) return;
+      if(document.hidden){ peakGazeAway = true; }
+      else if(peakGazeAway){
+        peakGazeAway = false;
+        if(corridorNow === "street"){ showPeakImg("corridorB"); }
+      }
+    });
+    /* 画面を離れた事実は、静かに測るだけ（表示は何も変えない） */
+    document.addEventListener("visibilitychange", function(){
+      if(!state || $("screen-quiz").classList.contains("hidden")) return;
+      if(document.hidden){
+        hiddenAt = Date.now();
+      } else {
+        if(hiddenAt){
+          var awaySec = (Date.now() - hiddenAt) / 1000;
+          if(awaySec >= 3){ awayCount++; if(awaySec > awayLongest) awayLongest = awaySec; }
+        }
+        hiddenAt = null;
+      }
+    });
+    </script>
+  </body>
+</html>
